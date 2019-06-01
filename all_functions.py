@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 import os
 
 
-def babbling_fcn():
+def babbling_fcn(simulation_minutes):
 	"""
 	this function babbles in the mujoco environment and then
 	returns input outputs (actuation values and kinematics)
@@ -21,28 +21,30 @@ def babbling_fcn():
 
 	control_vector_length=sim.data.ctrl.__len__()
 	print("control_vector_length: "+str(control_vector_length))
-
-	simulation_time=5*60.0
+	simulation_minutes
+	simulation_time=simulation_minutes*60.0
 	timestep=0.005
 	babble_phase_time=3
 
 	run_samples=int(np.round(simulation_time/timestep))
 	babble_phase_samples=int(np.round(babble_phase_time/timestep))
-	babbling_kinematics=np.zeros((run_samples,4))
+	babbling_kinematics=np.zeros((run_samples,6))
 	babbling_actuations=np.zeros((run_samples,3))
 
 	#while True:
 	sim.set_state(sim_state)
 	for ii in range(run_samples):
-	    current_kinematics_array=np.array([sim.data.qpos[0], sim.data.qvel[0], sim.data.qpos[1], sim.data.qvel[1]])
+	    current_kinematics_array=np.array([sim.data.qpos[0], sim.data.qvel[0], 0, sim.data.qpos[1], sim.data.qvel[1], 0])
 	    if (ii%babble_phase_samples)==0:
 	        sim.data.ctrl[:] = np.random.uniform(0,1,control_vector_length)
 	    sim.step()
 	    babbling_kinematics[ii,:]=current_kinematics_array
 	    babbling_actuations[ii,:]=sim.data.ctrl
 	    #viewer.render()
+    # adding acceleration
+	babbling_kinematics=np.transpose(np.concatenate(([babbling_kinematics[:,0]], [babbling_kinematics[:,1]], [np.gradient(babbling_kinematics[:,1])/timestep], [babbling_kinematics[:,3]], [babbling_kinematics[:,4]], [np.gradient(babbling_kinematics[:,4])/timestep]), axis=0))
 	print("min and max joint 0, min and max joint 1:")
-	print(np.min(babbling_kinematics[:,0]), np.max(babbling_kinematics[:,0]), np.min(babbling_kinematics[:,2]), np.max(babbling_kinematics[:,2]))
+	print(np.min(babbling_kinematics[:,0]), np.max(babbling_kinematics[:,0]), np.min(babbling_kinematics[:,3]), np.max(babbling_kinematics[:,3]))
 	return babbling_kinematics, babbling_actuations
 	#np.save("babbling_kinematics",babbling_kinematics)
 	#np.save("babbling_actuations",babbling_actuations)
@@ -104,7 +106,7 @@ def create_task_kinematics_fcn(task_length, number_of_cycles, mlp):
 		q0[ii]=(np.pi/3)*np.sin(number_of_cycles*(2*np.pi*ii/number_of_task_samples))
 		q1[ii]=-1*(np.pi/2)*((-1*np.cos(number_of_cycles*(2*np.pi*ii/number_of_task_samples))+1)/2)
 	#import pdb; pdb.set_trace()
-	task_kinematics=np.transpose(np.concatenate(([[q0], [np.gradient(q0)/timestep], [q1], [np.gradient(q1)/timestep]]),axis=0))
+	task_kinematics=np.transpose(np.concatenate(([[q0], [np.gradient(q0)/timestep], [np.gradient(np.gradient(q0)/timestep)/timestep], [q1], [np.gradient(q1)/timestep], [np.gradient(np.gradient(q1)/timestep)/timestep]]),axis=0))
 
 
 	# running the model
@@ -150,11 +152,10 @@ def run_task_fcn(task_kinematics, est_task_actuations):
 	control_vector_length=sim.data.ctrl.__len__()
 	print("control_vector_length "+str(control_vector_length))
 
-	simulation_time=5*60.0
 	timestep=0.005
 	number_of_task_samples=task_kinematics.shape[0]
 
-	real_task_kinematics=np.zeros((number_of_task_samples,4))
+	real_task_kinematics=np.zeros((number_of_task_samples,6))
 	real_task_actuations=np.zeros((number_of_task_samples,3))
 
 	#while True:
@@ -162,7 +163,7 @@ def run_task_fcn(task_kinematics, est_task_actuations):
 	for ii in range(number_of_task_samples):
 	    sim.data.ctrl[:]=est_task_actuations[ii,:]
 	    sim.step()
-	    current_kinematics_array=np.array([sim.data.qpos[0], sim.data.qvel[0], sim.data.qpos[1], sim.data.qvel[1]])
+	    current_kinematics_array=np.array([sim.data.qpos[0], sim.data.qvel[0], sim.data.qacc[0], sim.data.qpos[1], sim.data.qvel[1], sim.data.qacc[1]])
 	    real_task_kinematics[ii,:]=current_kinematics_array
 	    real_task_actuations[ii,:]=sim.data.ctrl
 	    viewer.render()
@@ -170,15 +171,21 @@ def run_task_fcn(task_kinematics, est_task_actuations):
 	#np.save("real_task_kinematics",real_task_kinematics)
 	#np.save("real_task_actuations",real_task_actuations)
 	plt.figure()
-	plt.subplot(411)
+	plt.subplot(611)
 	plt.plot(range(number_of_task_samples), task_kinematics[:,0], range(number_of_task_samples), real_task_kinematics[:,0])
-	plt.subplot(412)
+	plt.subplot(612)
 	plt.plot(range(number_of_task_samples), task_kinematics[:,1], range(number_of_task_samples), real_task_kinematics[:,1])
-	plt.subplot(413)
+	plt.subplot(613)
 	plt.plot(range(number_of_task_samples), task_kinematics[:,2], range(number_of_task_samples), real_task_kinematics[:,2])
-	plt.subplot(414)
+	plt.subplot(614)
 	plt.plot(range(number_of_task_samples), task_kinematics[:,3], range(number_of_task_samples), real_task_kinematics[:,3])
+	plt.subplot(615)
+	plt.plot(range(number_of_task_samples), task_kinematics[:,4], range(number_of_task_samples), real_task_kinematics[:,4])
+	plt.subplot(616)
+	plt.plot(range(number_of_task_samples), task_kinematics[:,5], range(number_of_task_samples), real_task_kinematics[:,5])
 	plt.show(block=True)
 	return real_task_kinematics, real_task_actuations
 	 #   if os.getenv('TESTING') is not None:
  #       break
+#import pdb; pdb.set_trace()
+	
