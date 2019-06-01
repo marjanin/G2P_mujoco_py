@@ -12,7 +12,6 @@ print("loading data")
 task_kinematics=np.load("task_kinematics.npy")
 est_task_actuations=np.load("est_task_actuations.npy")
 
-
 model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/mujoco-py/xmls/nmi_leg.xml")
 sim = MjSim(model)
 
