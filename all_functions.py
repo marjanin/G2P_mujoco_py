@@ -29,7 +29,7 @@ def babbling_fcn(simulation_minutes = 5 ):
 	run_samples=int(np.round(simulation_time/timestep))
 	babble_phase_samples=int(np.round(babble_phase_time/timestep))
 	babbling_kinematics=np.zeros((run_samples,6))
-	babbling_actuations=np.zeros((run_samples,3))
+	babbling_activations=np.zeros((run_samples,3))
 
 	#while True:
 	sim.set_state(sim_state)
@@ -44,7 +44,7 @@ def babbling_fcn(simulation_minutes = 5 ):
 	        sim.data.ctrl[:] = np.random.uniform(0,1,control_vector_length)
 	    sim.step()
 	    babbling_kinematics[ii,:]=current_kinematics_array
-	    babbling_actuations[ii,:]=sim.data.ctrl
+	    babbling_activations[ii,:]=sim.data.ctrl
 	    #viewer.render()
     # adding acceleration
 	babbling_kinematics = np.transpose(
@@ -64,55 +64,55 @@ def babbling_fcn(simulation_minutes = 5 ):
 		np.max(babbling_kinematics[:,0]),
 		np.min(babbling_kinematics[:,3]),
 		np.max(babbling_kinematics[:,3]))
-	return babbling_kinematics, babbling_actuations
+	return babbling_kinematics, babbling_activations
 	#np.save("babbling_kinematics",babbling_kinematics)
-	#np.save("babbling_actuations",babbling_actuations)
+	#np.save("babbling_activations",babbling_activations)
 
-def inverse_mapping_fcn(kinematics, actuations, **kwargs):
+def inverse_mapping_fcn(kinematics, activations, **kwargs):
 	"""
 	this function used the babbling data to create an inverse mapping using a
 	MLP NN
 	"""
-	number_of_samples=actuations.shape[0]
+	number_of_samples=activations.shape[0]
 	train_ratio=1 # from 0 to 1, 0 being all test and 1 being all train
 	kinematics_train=kinematics[:int(np.round(train_ratio*number_of_samples)),:]
 	kinematics_test=kinematics[int(np.round(train_ratio*number_of_samples))+1:,:]
-	actuations_train=actuations[:int(np.round(train_ratio*number_of_samples)),:]
-	actuations_test=actuations[int(np.round(train_ratio*number_of_samples))+1:,:]
-	number_of_samples_test=actuations_test.shape[0]
+	activations_train=activations[:int(np.round(train_ratio*number_of_samples)),:]
+	activations_test=activations[int(np.round(train_ratio*number_of_samples))+1:,:]
+	number_of_samples_test=activations_test.shape[0]
 
 	#training the model
 	print("training the model")
 	if kwargs=={}:
-		mlp = MLPRegressor(hidden_layer_sizes=(15), activation = "logistic",  verbose = True, warm_start = True)
+		model = MLPRegressor(hidden_layer_sizes=(15), activation = "logistic",  verbose = True, warm_start = True)
 	else:
-		mlp=kwargs["prior_model"]
+		model=kwargs["prior_model"]
 
-	mlp.fit(kinematics_train, actuations_train)
-	#pickle.dump(mlp,open("mlp_model.sav", 'wb'))
+	model.fit(kinematics_train, activations_train)
+	#pickle.dump(model,open("mlp_model.sav", 'wb'))
 
 	# running the model
 	print("running the model")
-	#mlp=pickle.load(open("mlp_model.sav", 'rb')) # loading the model
-	est_actuations=mlp.predict(kinematics)
+	#model=pickle.load(open("mlp_model.sav", 'rb')) # loading the model
+	est_activations=model.predict(kinematics)
 
 	# plotting the results
 	plt.figure()
 	plt.subplot(311)
-	plt.plot(range(actuations.shape[0]), actuations[:,0], range(actuations.shape[0]), est_actuations[:,0])
+	plt.plot(range(activations.shape[0]), activations[:,0], range(activations.shape[0]), est_activations[:,0])
 
 	plt.subplot(312)
-	plt.plot(range(actuations.shape[0]), actuations[:,1], range(actuations.shape[0]), est_actuations[:,1])
+	plt.plot(range(activations.shape[0]), activations[:,1], range(activations.shape[0]), est_activations[:,1])
 
 	plt.subplot(313)
-	plt.plot(range(actuations.shape[0]), actuations[:,2], range(actuations.shape[0]), est_actuations[:,2])
+	plt.plot(range(activations.shape[0]), activations[:,2], range(activations.shape[0]), est_activations[:,2])
 	plt.show(block=False)
-	return mlp
+	return model
 	#import pdb; pdb.set_trace()
 
 
 
-def create_task_kinematics_fcn(mlp, task_length = 10 , number_of_cycles = 7):
+def create_task_kinematics_fcn(task_length = 10 , number_of_cycles = 7):
 	"""
 	this function creates desired task kinematics and their corresponding 
 	actuation values predicted using the inverse mapping
@@ -139,38 +139,39 @@ def create_task_kinematics_fcn(mlp, task_length = 10 , number_of_cycles = 7):
 				[np.gradient(np.gradient(q1)/timestep)/timestep]]),
 			axis=0)
 		)
-	# running the model
-	print("running the model")
-	#mlp=pickle.load(open("mlp_model.sav", 'rb')) # loading the model
-	est_task_actuations=mlp.predict(task_kinematics)
+	#np.save("task_kinematics",task_kinematics)
+	#np.save("est_task_activations",est_task_activations)
+	#import pdb; pdb.set_trace()
+	return task_kinematics
 
+def estimate_activations_fcn(model, desired_kinematics):
+# running the model
+	print("running the model")
+	#model=pickle.load(open("mlp_model.sav", 'rb')) # loading the model
+	est_activations=model.predict(desired_kinematics)
 	# plotting the results
 	plt.figure()
 	plt.subplot(311)
-	plt.plot(range(task_kinematics.shape[0]), est_task_actuations[:,0])
+	plt.plot(range(desired_kinematics.shape[0]), est_activations[:,0])
 
 	plt.subplot(312)
-	plt.plot(range(task_kinematics.shape[0]), est_task_actuations[:,1])
+	plt.plot(range(desired_kinematics.shape[0]), est_activations[:,1])
 
 	plt.subplot(313)
-	plt.plot(range(task_kinematics.shape[0]), est_task_actuations[:,2])
+	plt.plot(range(desired_kinematics.shape[0]), est_activations[:,2])
 	plt.show(block=False)
-	#np.save("task_kinematics",task_kinematics)
-	#np.save("est_task_actuations",est_task_actuations)
-	#import pdb; pdb.set_trace()
-	return task_kinematics, est_task_actuations
+	return est_activations
 
-
-def run_task_fcn(task_kinematics, est_task_actuations):
+def run_task_fcn(task_kinematics, est_task_activations):
 	"""
-	this function runs the predicted actuations generatred from running
+	this function runs the predicted activations generatred from running
 	the inverse map on the desired task kinematics
 	"""
 
 	#loading data
 	#print("loading data")
 	#task_kinematics=np.load("task_kinematics.npy")
-	#est_task_actuations=np.load("est_task_actuations.npy")
+	#est_task_activations=np.load("est_task_activations.npy")
 
 
 	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/mujoco-py/xmls/nmi_leg.xml")
@@ -186,12 +187,12 @@ def run_task_fcn(task_kinematics, est_task_actuations):
 	number_of_task_samples=task_kinematics.shape[0]
 
 	real_task_kinematics=np.zeros((number_of_task_samples,6))
-	real_task_actuations=np.zeros((number_of_task_samples,3))
+	real_task_activations=np.zeros((number_of_task_samples,3))
 
 	#while True:
 	sim.set_state(sim_state)
 	for ii in range(number_of_task_samples):
-	    sim.data.ctrl[:]=est_task_actuations[ii,:]
+	    sim.data.ctrl[:]=est_task_activations[ii,:]
 	    sim.step()
 	    current_kinematics_array=np.array(
 	    	[sim.data.qpos[0],
@@ -200,11 +201,11 @@ def run_task_fcn(task_kinematics, est_task_actuations):
 	    	sim.data.qpos[1], sim.data.qvel[1],
 	    	sim.data.qacc[1]])
 	    real_task_kinematics[ii,:]=current_kinematics_array
-	    real_task_actuations[ii,:]=sim.data.ctrl
+	    real_task_activations[ii,:]=sim.data.ctrl
 	    viewer.render()
 
 	#np.save("real_task_kinematics",real_task_kinematics)
-	#np.save("real_task_actuations",real_task_actuations)
+	#np.save("real_task_activations",real_task_activations)
 	plt.figure()
 	plt.subplot(611)
 	plt.plot(range(number_of_task_samples), task_kinematics[:,0], range(number_of_task_samples), real_task_kinematics[:,0])
@@ -219,7 +220,7 @@ def run_task_fcn(task_kinematics, est_task_actuations):
 	plt.subplot(616)
 	plt.plot(range(number_of_task_samples), task_kinematics[:,5], range(number_of_task_samples), real_task_kinematics[:,5])
 	plt.show(block=True)
-	return real_task_kinematics, real_task_actuations
+	return real_task_kinematics, real_task_activations
 	 #   if os.getenv('TESTING') is not None:
  #       break
 #import pdb; pdb.set_trace()
