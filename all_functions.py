@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 import os
 
 
-def babbling_fcn(simulation_minutes):
+def babbling_fcn(simulation_minutes = 5 ):
 	"""
 	this function babbles in the mujoco environment and then
 	returns input outputs (actuation values and kinematics)
@@ -34,7 +34,12 @@ def babbling_fcn(simulation_minutes):
 	#while True:
 	sim.set_state(sim_state)
 	for ii in range(run_samples):
-	    current_kinematics_array=np.array([sim.data.qpos[0], sim.data.qvel[0], 0, sim.data.qpos[1], sim.data.qvel[1], 0])
+	    current_kinematics_array=np.array(
+	    	[sim.data.qpos[0],
+	    	sim.data.qvel[0],
+	    	0, sim.data.qpos[1],
+	    	sim.data.qvel[1],
+	    	0])
 	    if (ii%babble_phase_samples)==0:
 	        sim.data.ctrl[:] = np.random.uniform(0,1,control_vector_length)
 	    sim.step()
@@ -42,55 +47,72 @@ def babbling_fcn(simulation_minutes):
 	    babbling_actuations[ii,:]=sim.data.ctrl
 	    #viewer.render()
     # adding acceleration
-	babbling_kinematics=np.transpose(np.concatenate(([babbling_kinematics[:,0]], [babbling_kinematics[:,1]], [np.gradient(babbling_kinematics[:,1])/timestep], [babbling_kinematics[:,3]], [babbling_kinematics[:,4]], [np.gradient(babbling_kinematics[:,4])/timestep]), axis=0))
+	babbling_kinematics = np.transpose(
+		np.concatenate(
+			(
+				[babbling_kinematics[:,0]],
+				[babbling_kinematics[:,1]],
+				[np.gradient(babbling_kinematics[:,1])/timestep],
+				[babbling_kinematics[:,3]],
+				[babbling_kinematics[:,4]],
+				[np.gradient(babbling_kinematics[:,4])/timestep]),
+			axis=0)
+		)
 	print("min and max joint 0, min and max joint 1:")
-	print(np.min(babbling_kinematics[:,0]), np.max(babbling_kinematics[:,0]), np.min(babbling_kinematics[:,3]), np.max(babbling_kinematics[:,3]))
+	print(
+		np.min(babbling_kinematics[:,0]),
+		np.max(babbling_kinematics[:,0]),
+		np.min(babbling_kinematics[:,3]),
+		np.max(babbling_kinematics[:,3]))
 	return babbling_kinematics, babbling_actuations
 	#np.save("babbling_kinematics",babbling_kinematics)
 	#np.save("babbling_actuations",babbling_actuations)
 
-def inverse_mapping_fcn(babbling_kinematics, babbling_actuations):
+def inverse_mapping_fcn(kinematics, actuations, **kwargs):
 	"""
 	this function used the babbling data to create an inverse mapping using a
 	MLP NN
 	"""
-	number_of_samples=babbling_actuations.shape[0]
-
+	number_of_samples=actuations.shape[0]
 	train_ratio=1 # from 0 to 1, 0 being all test and 1 being all train
-	kinematics_train=babbling_kinematics[:int(np.round(train_ratio*number_of_samples)),:]
-	kinematics_test=babbling_kinematics[int(np.round(train_ratio*number_of_samples))+1:,:]
-	actuations_train=babbling_actuations[:int(np.round(train_ratio*number_of_samples)),:]
-	actuations_test=babbling_actuations[int(np.round(train_ratio*number_of_samples))+1:,:]
+	kinematics_train=kinematics[:int(np.round(train_ratio*number_of_samples)),:]
+	kinematics_test=kinematics[int(np.round(train_ratio*number_of_samples))+1:,:]
+	actuations_train=actuations[:int(np.round(train_ratio*number_of_samples)),:]
+	actuations_test=actuations[int(np.round(train_ratio*number_of_samples))+1:,:]
 	number_of_samples_test=actuations_test.shape[0]
 
 	#training the model
 	print("training the model")
-	mlp = MLPRegressor(hidden_layer_sizes=(15), activation = "logistic")
+	if kwargs=={}:
+		mlp = MLPRegressor(hidden_layer_sizes=(15), activation = "logistic",  verbose = True, warm_start = True)
+	else:
+		mlp=kwargs["prior_model"]
+
 	mlp.fit(kinematics_train, actuations_train)
 	#pickle.dump(mlp,open("mlp_model.sav", 'wb'))
 
 	# running the model
 	print("running the model")
 	#mlp=pickle.load(open("mlp_model.sav", 'rb')) # loading the model
-	est_actuations=mlp.predict(babbling_kinematics)
+	est_actuations=mlp.predict(kinematics)
 
 	# plotting the results
 	plt.figure()
 	plt.subplot(311)
-	plt.plot(range(babbling_actuations.shape[0]), babbling_actuations[:,0], range(babbling_actuations.shape[0]), est_actuations[:,0])
+	plt.plot(range(actuations.shape[0]), actuations[:,0], range(actuations.shape[0]), est_actuations[:,0])
 
 	plt.subplot(312)
-	plt.plot(range(babbling_actuations.shape[0]), babbling_actuations[:,1], range(babbling_actuations.shape[0]), est_actuations[:,1])
+	plt.plot(range(actuations.shape[0]), actuations[:,1], range(actuations.shape[0]), est_actuations[:,1])
 
 	plt.subplot(313)
-	plt.plot(range(babbling_actuations.shape[0]), babbling_actuations[:,2], range(babbling_actuations.shape[0]), est_actuations[:,2])
+	plt.plot(range(actuations.shape[0]), actuations[:,2], range(actuations.shape[0]), est_actuations[:,2])
 	plt.show(block=False)
 	return mlp
 	#import pdb; pdb.set_trace()
 
 
 
-def create_task_kinematics_fcn(task_length, number_of_cycles, mlp):
+def create_task_kinematics_fcn(mlp, task_length = 10 , number_of_cycles = 7):
 	"""
 	this function creates desired task kinematics and their corresponding 
 	actuation values predicted using the inverse mapping
@@ -106,9 +128,17 @@ def create_task_kinematics_fcn(task_length, number_of_cycles, mlp):
 		q0[ii]=(np.pi/3)*np.sin(number_of_cycles*(2*np.pi*ii/number_of_task_samples))
 		q1[ii]=-1*(np.pi/2)*((-1*np.cos(number_of_cycles*(2*np.pi*ii/number_of_task_samples))+1)/2)
 	#import pdb; pdb.set_trace()
-	task_kinematics=np.transpose(np.concatenate(([[q0], [np.gradient(q0)/timestep], [np.gradient(np.gradient(q0)/timestep)/timestep], [q1], [np.gradient(q1)/timestep], [np.gradient(np.gradient(q1)/timestep)/timestep]]),axis=0))
-
-
+	task_kinematics=np.transpose(
+		np.concatenate(
+			(
+				[[q0],
+				[np.gradient(q0)/timestep],
+				[np.gradient(np.gradient(q0)/timestep)/timestep],
+				[q1],
+				[np.gradient(q1)/timestep],
+				[np.gradient(np.gradient(q1)/timestep)/timestep]]),
+			axis=0)
+		)
 	# running the model
 	print("running the model")
 	#mlp=pickle.load(open("mlp_model.sav", 'rb')) # loading the model
@@ -163,7 +193,12 @@ def run_task_fcn(task_kinematics, est_task_actuations):
 	for ii in range(number_of_task_samples):
 	    sim.data.ctrl[:]=est_task_actuations[ii,:]
 	    sim.step()
-	    current_kinematics_array=np.array([sim.data.qpos[0], sim.data.qvel[0], sim.data.qacc[0], sim.data.qpos[1], sim.data.qvel[1], sim.data.qacc[1]])
+	    current_kinematics_array=np.array(
+	    	[sim.data.qpos[0],
+	    	sim.data.qvel[0],
+	    	sim.data.qacc[0],
+	    	sim.data.qpos[1], sim.data.qvel[1],
+	    	sim.data.qacc[1]])
 	    real_task_kinematics[ii,:]=current_kinematics_array
 	    real_task_actuations[ii,:]=sim.data.ctrl
 	    viewer.render()
