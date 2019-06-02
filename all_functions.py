@@ -177,7 +177,7 @@ def run_task_fcn(task_kinematics, est_task_activations):
 	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/mujoco-py/xmls/nmi_leg.xml")
 	sim = MjSim(model)
 
-	viewer = MjViewer(sim)
+	#viewer = MjViewer(sim)
 	sim_state = sim.get_state()
 
 	control_vector_length=sim.data.ctrl.__len__()
@@ -202,7 +202,7 @@ def run_task_fcn(task_kinematics, est_task_activations):
 	    	sim.data.qacc[1]])
 	    real_task_kinematics[ii,:]=current_kinematics_array
 	    real_task_activations[ii,:]=sim.data.ctrl
-	    viewer.render()
+	    #viewer.render()
 
 	#np.save("real_task_kinematics",real_task_kinematics)
 	#np.save("real_task_activations",real_task_activations)
