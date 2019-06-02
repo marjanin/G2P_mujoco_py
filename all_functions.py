@@ -97,16 +97,16 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 	est_activations=model.predict(kinematics)
 
 	# plotting the results
-	plt.figure()
-	plt.subplot(311)
-	plt.plot(range(activations.shape[0]), activations[:,0], range(activations.shape[0]), est_activations[:,0])
+	# plt.figure()
+	# plt.subplot(311)
+	# plt.plot(range(activations.shape[0]), activations[:,0], range(activations.shape[0]), est_activations[:,0])
 
-	plt.subplot(312)
-	plt.plot(range(activations.shape[0]), activations[:,1], range(activations.shape[0]), est_activations[:,1])
+	# plt.subplot(312)
+	# plt.plot(range(activations.shape[0]), activations[:,1], range(activations.shape[0]), est_activations[:,1])
 
-	plt.subplot(313)
-	plt.plot(range(activations.shape[0]), activations[:,2], range(activations.shape[0]), est_activations[:,2])
-	plt.show(block=False)
+	# plt.subplot(313)
+	# plt.plot(range(activations.shape[0]), activations[:,2], range(activations.shape[0]), est_activations[:,2])
+	# plt.show(block=False)
 	return model
 	#import pdb; pdb.set_trace()
 
@@ -150,16 +150,16 @@ def estimate_activations_fcn(model, desired_kinematics):
 	#model=pickle.load(open("mlp_model.sav", 'rb')) # loading the model
 	est_activations=model.predict(desired_kinematics)
 	# plotting the results
-	plt.figure()
-	plt.subplot(311)
-	plt.plot(range(desired_kinematics.shape[0]), est_activations[:,0])
+	# plt.figure()
+	# plt.subplot(311)
+	# plt.plot(range(desired_kinematics.shape[0]), est_activations[:,0])
 
-	plt.subplot(312)
-	plt.plot(range(desired_kinematics.shape[0]), est_activations[:,1])
+	# plt.subplot(312)
+	# plt.plot(range(desired_kinematics.shape[0]), est_activations[:,1])
 
-	plt.subplot(313)
-	plt.plot(range(desired_kinematics.shape[0]), est_activations[:,2])
-	plt.show(block=False)
+	# plt.subplot(313)
+	# plt.plot(range(desired_kinematics.shape[0]), est_activations[:,2])
+	# plt.show(block=False)
 	return est_activations
 
 def run_task_fcn(task_kinematics, est_task_activations):
@@ -206,22 +206,26 @@ def run_task_fcn(task_kinematics, est_task_activations):
 
 	#np.save("real_task_kinematics",real_task_kinematics)
 	#np.save("real_task_activations",real_task_activations)
-	plt.figure()
-	plt.subplot(611)
-	plt.plot(range(number_of_task_samples), task_kinematics[:,0], range(number_of_task_samples), real_task_kinematics[:,0])
-	plt.subplot(612)
-	plt.plot(range(number_of_task_samples), task_kinematics[:,1], range(number_of_task_samples), real_task_kinematics[:,1])
-	plt.subplot(613)
-	plt.plot(range(number_of_task_samples), task_kinematics[:,2], range(number_of_task_samples), real_task_kinematics[:,2])
-	plt.subplot(614)
-	plt.plot(range(number_of_task_samples), task_kinematics[:,3], range(number_of_task_samples), real_task_kinematics[:,3])
-	plt.subplot(615)
-	plt.plot(range(number_of_task_samples), task_kinematics[:,4], range(number_of_task_samples), real_task_kinematics[:,4])
-	plt.subplot(616)
-	plt.plot(range(number_of_task_samples), task_kinematics[:,5], range(number_of_task_samples), real_task_kinematics[:,5])
-	plt.show(block=True)
+	# plt.figure()
+	# plt.subplot(611)
+	# plt.plot(range(number_of_task_samples), task_kinematics[:,0], range(number_of_task_samples), real_task_kinematics[:,0])
+	# plt.subplot(612)
+	# plt.plot(range(number_of_task_samples), task_kinematics[:,1], range(number_of_task_samples), real_task_kinematics[:,1])
+	# plt.subplot(613)
+	# plt.plot(range(number_of_task_samples), task_kinematics[:,2], range(number_of_task_samples), real_task_kinematics[:,2])
+	# plt.subplot(614)
+	# plt.plot(range(number_of_task_samples), task_kinematics[:,3], range(number_of_task_samples), real_task_kinematics[:,3])
+	# plt.subplot(615)
+	# plt.plot(range(number_of_task_samples), task_kinematics[:,4], range(number_of_task_samples), real_task_kinematics[:,4])
+	# plt.subplot(616)
+	# plt.plot(range(number_of_task_samples), task_kinematics[:,5], range(number_of_task_samples), real_task_kinematics[:,5])
+	# plt.show(block=False)
 	return real_task_kinematics, real_task_activations
 	 #   if os.getenv('TESTING') is not None:
  #       break
+def error_cal_fcn(input1, input2):
+	error = np.sum(np.abs(input1-input2))
+	return error
+
 #import pdb; pdb.set_trace()
 	
