@@ -174,7 +174,7 @@ def run_task_fcn(task_kinematics, est_task_activations):
 	#est_task_activations=np.load("est_task_activations.npy")
 
 
-	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/mujoco-py/xmls/nmi_leg.xml")
+	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/G2P_mujoco-py/models/nmi_leg_w_chassis_fixed.xml")
 	sim = MjSim(model)
 
 	#viewer = MjViewer(sim)

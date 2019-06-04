@@ -3,8 +3,7 @@
 # add stiffness too
 import numpy as np
 from matplotlib import pyplot as plt
-from all_functions import babbling_fcn, inverse_mapping_fcn, create_task_kinematics_fcn, estimate_activations_fcn, run_task_fcn, error_cal_fcn
-
+from all_functions import *
 
 [babbling_kinematics, babbling_activations] = babbling_fcn(simulation_minutes = 5)
 model = inverse_mapping_fcn(kinematics= babbling_kinematics, activations= babbling_activations)
