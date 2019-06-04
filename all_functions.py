@@ -5,6 +5,27 @@ from matplotlib import pyplot as plt
 #import pickle
 import os
 
+def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, number_of_refinements = 10):
+	cum_kinematics = babbling_kinematics
+	cum_activations = babbling_activations
+	task_kinematics = create_sin_cos_kinematics_fcn(task_length = 10, number_of_cycles = 7)
+	est_task_activations = estimate_activations_fcn(model = model, desired_kinematics = task_kinematics)
+	[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations)
+	error0=error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0])
+	error1=error_cal_fcn(task_kinematics[:,1], real_task_kinematics[:,1])
+	for ii in range(number_of_refinements):
+		print("Refinement_no", ii+1)
+		cum_kinematics=np.concatenate([cum_kinematics, real_task_kinematics])
+		cum_activations=np.concatenate([cum_activations, real_task_activations])
+		model = inverse_mapping_fcn(kinematics= cum_kinematics, activations= cum_activations, prior_model=model)
+		est_task_activations = estimate_activations_fcn(model = model, desired_kinematics = task_kinematics)
+		[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations)
+		error0=np.append(error0, error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0]))
+		error1=np.append(error1, error_cal_fcn(task_kinematics[:,1], real_task_kinematics[:,1]))
+	plt.plot(range(error0.shape[0]), error0)
+	plt.show()
+	errors=np.concatenate([[error0], [error1]],axis=0)
+	return model, errors
 
 def babbling_fcn(simulation_minutes = 5 ):
 	"""
@@ -84,7 +105,7 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 	#training the model
 	print("training the model")
 	if kwargs=={}:
-		model = MLPRegressor(hidden_layer_sizes=(15), activation = "logistic",  verbose = True, warm_start = True)
+		model = MLPRegressor(hidden_layer_sizes=15, activation = "logistic",  verbose = True, warm_start = True)
 	else:
 		model=kwargs["prior_model"]
 
@@ -112,7 +133,7 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 
 
 
-def create_task_kinematics_fcn(task_length = 10 , number_of_cycles = 7):
+def create_sin_cos_kinematics_fcn(task_length = 10 , number_of_cycles = 7):
 	"""
 	this function creates desired task kinematics and their corresponding 
 	actuation values predicted using the inverse mapping
