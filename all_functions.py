@@ -12,7 +12,7 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	est_task_activations = estimate_activations_fcn(model = model, desired_kinematics = task_kinematics)
 	[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations)
 	error0=error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0])
-	error1=error_cal_fcn(task_kinematics[:,1], real_task_kinematics[:,1])
+	error1=error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3])
 	for ii in range(number_of_refinements):
 		print("Refinement_no", ii+1)
 		cum_kinematics=np.concatenate([cum_kinematics, real_task_kinematics])
@@ -21,8 +21,20 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 		est_task_activations = estimate_activations_fcn(model = model, desired_kinematics = task_kinematics)
 		[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations)
 		error0=np.append(error0, error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0]))
-		error1=np.append(error1, error_cal_fcn(task_kinematics[:,1], real_task_kinematics[:,1]))
+		error1=np.append(error1, error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3]))
+	
+	plt.figure()
+	plt.subplot(2, 1, 1)
 	plt.plot(range(error0.shape[0]), error0)
+	plt.subplot(2, 1, 2)
+	plt.plot(range(error1.shape[0]), error1)
+
+	plt.figure()
+	plt.subplot(2, 1, 1)
+	plt.plot(range(task_kinematics.shape[0]), task_kinematics[:,0], range(task_kinematics.shape[0]), real_task_kinematics[:,0])
+	plt.subplot(2, 1, 2)
+	plt.plot(range(task_kinematics.shape[0]), task_kinematics[:,3], range(task_kinematics.shape[0]), real_task_kinematics[:,3])
+
 	plt.show()
 	errors=np.concatenate([[error0], [error1]],axis=0)
 	return model, errors
@@ -34,7 +46,7 @@ def babbling_fcn(simulation_minutes = 5 ):
 	"""
 	np.random.seed(0) # to get consistent results for debugging purposes
 
-	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/mujoco-py/xmls/nmi_leg.xml")
+	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/mujoco-py/xmls/nmi_leg_w_chassis_fixed.xml")
 	sim = MjSim(model)
 
 	#viewer = MjViewer(sim)
@@ -119,13 +131,13 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 
 	# plotting the results
 	# plt.figure()
-	# plt.subplot(311)
+	# plt.subplot(3, 1, 1)
 	# plt.plot(range(activations.shape[0]), activations[:,0], range(activations.shape[0]), est_activations[:,0])
 
-	# plt.subplot(312)
+	# plt.subplot(3, 1, 2)
 	# plt.plot(range(activations.shape[0]), activations[:,1], range(activations.shape[0]), est_activations[:,1])
 
-	# plt.subplot(313)
+	# plt.subplot(3, 1, 3)
 	# plt.plot(range(activations.shape[0]), activations[:,2], range(activations.shape[0]), est_activations[:,2])
 	# plt.show(block=False)
 	return model
@@ -172,13 +184,13 @@ def estimate_activations_fcn(model, desired_kinematics):
 	est_activations=model.predict(desired_kinematics)
 	# plotting the results
 	# plt.figure()
-	# plt.subplot(311)
+	# plt.subplot(3, 1, 1)
 	# plt.plot(range(desired_kinematics.shape[0]), est_activations[:,0])
 
-	# plt.subplot(312)
+	# plt.subplot(3, 1, 2)
 	# plt.plot(range(desired_kinematics.shape[0]), est_activations[:,1])
 
-	# plt.subplot(313)
+	# plt.subplot(3, 1, 3)
 	# plt.plot(range(desired_kinematics.shape[0]), est_activations[:,2])
 	# plt.show(block=False)
 	return est_activations
@@ -228,24 +240,24 @@ def run_task_fcn(task_kinematics, est_task_activations):
 	#np.save("real_task_kinematics",real_task_kinematics)
 	#np.save("real_task_activations",real_task_activations)
 	# plt.figure()
-	# plt.subplot(611)
+	# plt.subplot(6, 1, 1)
 	# plt.plot(range(number_of_task_samples), task_kinematics[:,0], range(number_of_task_samples), real_task_kinematics[:,0])
-	# plt.subplot(612)
+	# plt.subplot(6, 1, 2)
 	# plt.plot(range(number_of_task_samples), task_kinematics[:,1], range(number_of_task_samples), real_task_kinematics[:,1])
-	# plt.subplot(613)
+	# plt.subplot(6, 1, 3)
 	# plt.plot(range(number_of_task_samples), task_kinematics[:,2], range(number_of_task_samples), real_task_kinematics[:,2])
-	# plt.subplot(614)
+	# plt.subplot(6, 1, 4)
 	# plt.plot(range(number_of_task_samples), task_kinematics[:,3], range(number_of_task_samples), real_task_kinematics[:,3])
-	# plt.subplot(615)
+	# plt.subplot(6, 1, 5)
 	# plt.plot(range(number_of_task_samples), task_kinematics[:,4], range(number_of_task_samples), real_task_kinematics[:,4])
-	# plt.subplot(616)
+	# plt.subplot(6, 1, 6)
 	# plt.plot(range(number_of_task_samples), task_kinematics[:,5], range(number_of_task_samples), real_task_kinematics[:,5])
 	# plt.show(block=False)
 	return real_task_kinematics, real_task_activations
 	 #   if os.getenv('TESTING') is not None:
  #       break
 def error_cal_fcn(input1, input2):
-	error = np.sum(np.abs(input1-input2))
+	error = np.mean(np.abs(input1-input2))
 	return error
 
 #import pdb; pdb.set_trace()
