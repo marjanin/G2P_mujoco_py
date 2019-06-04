@@ -5,11 +5,11 @@ from matplotlib import pyplot as plt
 #import pickle
 import os
 
-def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, number_of_refinements = 10):
+def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, number_of_refinements=10):
 	cum_kinematics = babbling_kinematics
 	cum_activations = babbling_activations
-	task_kinematics = create_sin_cos_kinematics_fcn(task_length = 10, number_of_cycles = 7)
-	est_task_activations = estimate_activations_fcn(model = model, desired_kinematics = task_kinematics)
+	task_kinematics = create_sin_cos_kinematics_fcn(task_length=10, number_of_cycles=7)
+	est_task_activations = estimate_activations_fcn(model=model, desired_kinematics=task_kinematics)
 	[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations)
 	error0=error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0])
 	error1=error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3])
@@ -18,13 +18,13 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 		if ii+1 == number_of_refinements:
 			Mj_render = True
 		print("Refinement_no", ii+1)
-		cum_kinematics=np.concatenate([cum_kinematics, real_task_kinematics])
-		cum_activations=np.concatenate([cum_activations, real_task_activations])
-		model = inverse_mapping_fcn(kinematics= cum_kinematics, activations= cum_activations, prior_model=model)
-		est_task_activations = estimate_activations_fcn(model = model, desired_kinematics = task_kinematics)
-		[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations, Mj_render = Mj_render)
-		error0=np.append(error0, error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0]))
-		error1=np.append(error1, error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3]))
+		cum_kinematics = np.concatenate([cum_kinematics, real_task_kinematics])
+		cum_activations = np.concatenate([cum_activations, real_task_activations])
+		model = inverse_mapping_fcn(kinematics=cum_kinematics, activations=cum_activations, prior_model=model)
+		est_task_activations = estimate_activations_fcn(model=model, desired_kinematics=task_kinematics)
+		[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations, Mj_render=Mj_render)
+		error0 = np.append(error0, error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0]))
+		error1 = np.append(error1, error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3]))
 	
 	# plotting error plots
 	plt.figure()
@@ -125,10 +125,10 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 
 	#training the model
 	print("training the model")
-	if kwargs=={}:
-		model = MLPRegressor(hidden_layer_sizes=15, activation = "logistic",  verbose = True, warm_start = True)
-	else:
+	if ("prior_model" in kwargs):
 		model=kwargs["prior_model"]
+	else:
+		model = MLPRegressor(hidden_layer_sizes=15, activation = "logistic",  verbose = True, warm_start = True)
 
 	model.fit(kinematics_train, activations_train)
 	#pickle.dump(model,open("mlp_model.sav", 'wb'))
