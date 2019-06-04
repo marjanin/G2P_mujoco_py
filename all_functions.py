@@ -23,12 +23,13 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 		error0=np.append(error0, error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0]))
 		error1=np.append(error1, error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3]))
 	
+	# plotting error plots
 	plt.figure()
 	plt.subplot(2, 1, 1)
 	plt.plot(range(error0.shape[0]), error0)
 	plt.subplot(2, 1, 2)
 	plt.plot(range(error1.shape[0]), error1)
-
+	# plotting desired vs real joint positions after refinements 
 	plt.figure()
 	plt.subplot(2, 1, 1)
 	plt.plot(range(task_kinematics.shape[0]), task_kinematics[:,0], range(task_kinematics.shape[0]), real_task_kinematics[:,0])
