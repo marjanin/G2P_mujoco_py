@@ -13,13 +13,16 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations)
 	error0=error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0])
 	error1=error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3])
+	Mj_render = False
 	for ii in range(number_of_refinements):
+		if ii+1 == number_of_refinements:
+			Mj_render = True
 		print("Refinement_no", ii+1)
 		cum_kinematics=np.concatenate([cum_kinematics, real_task_kinematics])
 		cum_activations=np.concatenate([cum_activations, real_task_activations])
 		model = inverse_mapping_fcn(kinematics= cum_kinematics, activations= cum_activations, prior_model=model)
 		est_task_activations = estimate_activations_fcn(model = model, desired_kinematics = task_kinematics)
-		[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations)
+		[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations, Mj_render = Mj_render)
 		error0=np.append(error0, error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0]))
 		error1=np.append(error1, error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3]))
 	
@@ -27,15 +30,20 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	plt.figure()
 	plt.subplot(2, 1, 1)
 	plt.plot(range(error0.shape[0]), error0)
+	plt.ylabel("q0 error in rads")
 	plt.subplot(2, 1, 2)
 	plt.plot(range(error1.shape[0]), error1)
+	plt.ylabel("q1 error in rads")
+	plt.xlabel("Refinement #")
 	# plotting desired vs real joint positions after refinements 
 	plt.figure()
 	plt.subplot(2, 1, 1)
 	plt.plot(range(task_kinematics.shape[0]), task_kinematics[:,0], range(task_kinematics.shape[0]), real_task_kinematics[:,0])
+	plt.ylabel("q0 desired vs. simulated")
 	plt.subplot(2, 1, 2)
 	plt.plot(range(task_kinematics.shape[0]), task_kinematics[:,3], range(task_kinematics.shape[0]), real_task_kinematics[:,3])
-
+	plt.ylabel("q1  desired vs. simulated")
+	plt.xlabel("Sample #")
 	plt.show()
 	errors=np.concatenate([[error0], [error1]],axis=0)
 	return model, errors
@@ -126,7 +134,6 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 	#pickle.dump(model,open("mlp_model.sav", 'wb'))
 
 	# running the model
-	print("running the model")
 	#model=pickle.load(open("mlp_model.sav", 'rb')) # loading the model
 	est_activations=model.predict(kinematics)
 
@@ -196,7 +203,7 @@ def estimate_activations_fcn(model, desired_kinematics):
 	# plt.show(block=False)
 	return est_activations
 
-def run_task_fcn(task_kinematics, est_task_activations):
+def run_task_fcn(task_kinematics, est_task_activations, Mj_render = False):
 	"""
 	this function runs the predicted activations generatred from running
 	the inverse map on the desired task kinematics
@@ -210,8 +217,8 @@ def run_task_fcn(task_kinematics, est_task_activations):
 
 	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/G2P_mujoco-py/models/nmi_leg_w_chassis_fixed.xml")
 	sim = MjSim(model)
-
-	#viewer = MjViewer(sim)
+	if Mj_render:
+		viewer = MjViewer(sim)
 	sim_state = sim.get_state()
 
 	control_vector_length=sim.data.ctrl.__len__()
@@ -236,8 +243,8 @@ def run_task_fcn(task_kinematics, est_task_activations):
 	    	sim.data.qacc[1]])
 	    real_task_kinematics[ii,:]=current_kinematics_array
 	    real_task_activations[ii,:]=sim.data.ctrl
-	    #viewer.render()
-
+	    if Mj_render:
+	    	viewer.render()
 	#np.save("real_task_kinematics",real_task_kinematics)
 	#np.save("real_task_activations",real_task_activations)
 	# plt.figure()
