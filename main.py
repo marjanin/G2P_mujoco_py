@@ -8,12 +8,11 @@ import pickle
 
 
 
-#[babbling_kinematics, babbling_activations] = babbling_fcn(simulation_minutes=5)
-#model = inverse_mapping_fcn(kinematics=babbling_kinematics, activations=babbling_activations)
+[babbling_kinematics, babbling_activations] = babbling_fcn(simulation_minutes=5)
+model = inverse_mapping_fcn(kinematics=babbling_kinematics, activations=babbling_activations)
 
-
-#[model, errors] = in_air_adaptation_fcn(model=model, babbling_kinematics=babbling_kinematics, babbling_activations=babbling_activations, number_of_refinements=10)
-#pickle.dump(model,open("results/mlp_model.sav", 'wb'))
+[model, errors] = in_air_adaptation_fcn(model=model, babbling_kinematics=babbling_kinematics, babbling_activations=babbling_activations, number_of_refinements=10)
+pickle.dump(model,open("results/mlp_model.sav", 'wb'))
 
 # mini test code
 model=pickle.load(open("results/mlp_model.sav", 'rb')) # loading the model

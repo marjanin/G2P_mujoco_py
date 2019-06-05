@@ -12,7 +12,7 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	cum_kinematics = babbling_kinematics
 	cum_activations = babbling_activations
 	task_kinematics = create_sin_cos_kinematics_fcn(task_length=10, number_of_cycles=7)
-	kinematics_show(task_kinematics)
+	#kinematics_show(task_kinematics)
 	est_task_activations = estimate_activations_fcn(model=model, desired_kinematics=task_kinematics)
 	[real_task_kinematics, real_task_activations, chassis_pos] = run_task_fcn(est_task_activations)
 	error0=error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0])
