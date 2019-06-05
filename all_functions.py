@@ -73,7 +73,6 @@ def gen_features_fcn(prev_reward, **kwargs):
 		new_features = np.minimum(new_features, feat_max*np.ones(prev_features.shape[0],))
 	return new_features
 
-
 def feat_to_positions_fcn(features):
 	each_feature_length = 30 # each cycle duration in seconds/timestep
 	number_of_features = features.shape[0]
@@ -116,21 +115,6 @@ def feat_to_positions_fcn(features):
 	plt.ylabel = "q1"
 	plt.show(block=True)
 	return q0_filtered, q1_filtered
-
-def positions_to_kinematics(q0, q1, timestep):
-	kinematics=np.transpose(
-	np.concatenate(
-		(
-			[[q0],
-			[np.gradient(q0)/timestep],
-			[np.gradient(np.gradient(q0)/timestep)/timestep],
-			[q1],
-			[np.gradient(q1)/timestep],
-			[np.gradient(np.gradient(q1)/timestep)/timestep]]),
-		axis=0
-		)
-	)
-	return kinematics
 
 ################################################
 #Lower level control functions
@@ -237,14 +221,26 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 	return model
 	#import pdb; pdb.set_trace()
 
+def positions_to_kinematics_fcn(q0, q1, timestep):
+	kinematics=np.transpose(
+	np.concatenate(
+		(
+			[[q0],
+			[np.gradient(q0)/timestep],
+			[np.gradient(np.gradient(q0)/timestep)/timestep],
+			[q1],
+			[np.gradient(q1)/timestep],
+			[np.gradient(np.gradient(q1)/timestep)/timestep]]),
+		axis=0
+		)
+	)
+	return kinematics
 
-
-def create_sin_cos_kinematics_fcn(task_length = 10 , number_of_cycles = 7):
+def create_sin_cos_kinematics_fcn(task_length = 10 , number_of_cycles = 7, timestep = 0.005):
 	"""
 	this function creates desired task kinematics and their corresponding 
 	actuation values predicted using the inverse mapping
 	"""
-	timestep=0.005
 	#task_length=5 # in seconds
 	number_of_task_samples=int(np.round(task_length/timestep))
 
@@ -255,17 +251,7 @@ def create_sin_cos_kinematics_fcn(task_length = 10 , number_of_cycles = 7):
 		q0[ii]=(np.pi/3)*np.sin(number_of_cycles*(2*np.pi*ii/number_of_task_samples))
 		q1[ii]=-1*(np.pi/2)*((-1*np.cos(number_of_cycles*(2*np.pi*ii/number_of_task_samples))+1)/2)
 	#import pdb; pdb.set_trace()
-	task_kinematics=np.transpose(
-		np.concatenate(
-			(
-				[[q0],
-				[np.gradient(q0)/timestep],
-				[np.gradient(np.gradient(q0)/timestep)/timestep],
-				[q1],
-				[np.gradient(q1)/timestep],
-				[np.gradient(np.gradient(q1)/timestep)/timestep]]),
-			axis=0)
-		)
+	task_kinematics=positions_to_kinematics_fcn(q0, q1, timestep)
 	#np.save("task_kinematics",task_kinematics)
 	#np.save("est_task_activations",est_task_activations)
 	#import pdb; pdb.set_trace()
