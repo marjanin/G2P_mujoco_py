@@ -1,5 +1,6 @@
 from mujoco_py import load_model_from_path, MjSim, MjViewer
 import numpy as np
+from numpy import matlib
 from scipy import signal
 from sklearn.neural_network import MLPRegressor
 from matplotlib import pyplot as plt
@@ -11,8 +12,9 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	cum_kinematics = babbling_kinematics
 	cum_activations = babbling_activations
 	task_kinematics = create_sin_cos_kinematics_fcn(task_length=10, number_of_cycles=7)
+	kinematics_show(task_kinematics)
 	est_task_activations = estimate_activations_fcn(model=model, desired_kinematics=task_kinematics)
-	[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations)
+	[real_task_kinematics, real_task_activations, chassis_pos] = run_task_fcn(est_task_activations)
 	error0=error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0])
 	error1=error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3])
 	Mj_render = False
@@ -24,7 +26,7 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 		cum_activations = np.concatenate([cum_activations, real_task_activations])
 		model = inverse_mapping_fcn(kinematics=cum_kinematics, activations=cum_activations, prior_model=model)
 		est_task_activations = estimate_activations_fcn(model=model, desired_kinematics=task_kinematics)
-		[real_task_kinematics, real_task_activations] = run_task_fcn(task_kinematics, est_task_activations, Mj_render=Mj_render)
+		[real_task_kinematics, real_task_activations, chassis_pos] = run_task_fcn(est_task_activations, Mj_render=Mj_render)
 		error0 = np.append(error0, error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0]))
 		error1 = np.append(error1, error_cal_fcn(task_kinematics[:,3], real_task_kinematics[:,3]))
 	
@@ -53,18 +55,19 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 #Higher level control functions
 def gen_features_fcn(prev_reward, **kwargs):
 	#import pdb; pdb.set_trace()
-	reward_thresh = 10
+	reward_thresh = 1.7
 	feat_min = 0.1
 	feat_max = 0.9
-	sigma=.00001 # should be inversly proportional to reward
+	sigma=.1 # should be inversly proportional to reward
 	if ("prev_features" in kwargs):
 		prev_features = kwargs["prev_features"]
 	elif ("feat_vec_length" in kwargs):
 		prev_features = np.random.uniform(feat_min,feat_max,kwargs["feat_vec_length"])
 	else:
 		raise NameError('Either prev_features or feat_vec_length needs to be provided')
+	
 	if prev_reward<reward_thresh:
-		new_features = np.random.uniform(feat_min,feat_max,kwargs["feat_vec_length"])	
+		new_features = np.random.uniform(feat_min, feat_max, prev_features.shape[0])	
 	else:
 		new_features = np.zeros(prev_features.shape[0],)
 		for ii in range(prev_features.shape[0]):
@@ -73,12 +76,12 @@ def gen_features_fcn(prev_reward, **kwargs):
 		new_features = np.minimum(new_features, feat_max*np.ones(prev_features.shape[0],))
 	return new_features
 
-def feat_to_positions_fcn(features):
-	each_feature_length = 30 # each cycle duration in seconds/timestep
+def feat_to_positions_fcn(features, timestep=0.005, cycle_duration_in_seconds = 1.3, show=False):
 	number_of_features = features.shape[0]
+	each_feature_length =  int(np.round((cycle_duration_in_seconds/number_of_features)/timestep))
 	feat_angles = np.linspace(0, 2*np.pi*(number_of_features/(number_of_features+1)), number_of_features)
 	q0_raw = features*np.sin(feat_angles)
-	q1_raw = features*np.cos(feat_angles)
+	q1_raw = -1*features*np.cos(feat_angles)
 	q0_scaled = (q0_raw*np.pi/3)
 	q1_scaled = -1*((q1_raw*np.pi/4)+(np.pi/4)) # since the mujoco model goes from 0 to -pi/2
 	q0_scaled_extended = np.append(q0_scaled, q0_scaled[0])
@@ -98,7 +101,7 @@ def feat_to_positions_fcn(features):
 	q1_scaled_extended_long_3 = np.concatenate(
 		[q1_scaled_extended_long[:-1], q1_scaled_extended_long[:-1], q1_scaled_extended_long])
 
-	fir_filter_length = int(np.round(each_feature_length/2))
+	fir_filter_length = int(np.round(each_feature_length/(1)))
 	b=np.ones(fir_filter_length,)/fir_filter_length # a simple moving average filter > users can 
 	#change these if they need smoother pattern
 	a=1
@@ -108,14 +111,17 @@ def feat_to_positions_fcn(features):
 	q0_filtered = q0_filtered_3[q0_scaled_extended_long.shape[0]:2*q0_scaled_extended_long.shape[0]-1] # length = 1999 (the 
 	#very last was ommited since it is going to be the first one on the next cycle)
 	q1_filtered = q1_filtered_3[q1_scaled_extended_long.shape[0]:2*q1_scaled_extended_long.shape[0]-1]
-	plt.figure()
-	plt.scatter(q0_scaled, q1_scaled)
-	plt.plot(q0_filtered, q1_filtered)
-	plt.xlabel = "q0"
-	plt.ylabel = "q1"
-	plt.show(block=True)
+	if show:
+		plt.figure()
+		plt.scatter(q0_scaled, q1_scaled)
+		plt.plot(q0_filtered, q1_filtered)
+		plt.xlabel("q0")
+		plt.ylabel("q1")
+		plt.show(block=True)
 	return q0_filtered, q1_filtered
-
+def attempt_to_run_kinematics(attempt_kinematics, number_of_attempts_in_a_run = 10):
+	run_kinematics=np.matlib.repmat(attempt_kinematics,10,1)
+	return(run_kinematics)
 ################################################
 #Lower level control functions
 def babbling_fcn(simulation_minutes = 5 ):
@@ -236,6 +242,23 @@ def positions_to_kinematics_fcn(q0, q1, timestep):
 	)
 	return kinematics
 
+def kinematics_show(kinematics):
+	#plotting the resulting kinematics
+		plt.figure()
+		plt.subplot(6, 1, 1)
+		plt.plot(range(kinematics.shape[0]), kinematics[:,0])
+		plt.subplot(6, 1, 2)
+		plt.plot(range(kinematics.shape[0]), kinematics[:,1])
+		plt.subplot(6, 1, 3)
+		plt.plot(range(kinematics.shape[0]), kinematics[:,2])
+		plt.subplot(6, 1, 4)
+		plt.plot(range(kinematics.shape[0]), kinematics[:,3])
+		plt.subplot(6, 1, 5)
+		plt.plot(range(kinematics.shape[0]), kinematics[:,4])
+		plt.subplot(6, 1, 6)
+		plt.plot(range(kinematics.shape[0]), kinematics[:,5])
+		plt.show(block=True)
+
 def create_sin_cos_kinematics_fcn(task_length = 10 , number_of_cycles = 7, timestep = 0.005):
 	"""
 	this function creates desired task kinematics and their corresponding 
@@ -275,7 +298,7 @@ def estimate_activations_fcn(model, desired_kinematics):
 	# plt.show(block=False)
 	return est_activations
 
-def run_task_fcn(task_kinematics, est_task_activations, Mj_render = False):
+def run_task_fcn(est_task_activations,	chassis_fix=True, timestep=0.005, Mj_render=False):
 	"""
 	this function runs the predicted activations generatred from running
 	the inverse map on the desired task kinematics
@@ -286,8 +309,10 @@ def run_task_fcn(task_kinematics, est_task_activations, Mj_render = False):
 	#task_kinematics=np.load("task_kinematics.npy")
 	#est_task_activations=np.load("est_task_activations.npy")
 
-
-	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/G2P_mujoco-py/models/nmi_leg_w_chassis_fixed.xml")
+	if chassis_fix:
+		model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/G2P_mujoco-py/models/nmi_leg_w_chassis_fixed.xml")
+	else:
+		model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/G2P_mujoco-py/models/nmi_leg_w_chassis_walk.xml")
 	sim = MjSim(model)
 	if Mj_render:
 		viewer = MjViewer(sim)
@@ -296,12 +321,11 @@ def run_task_fcn(task_kinematics, est_task_activations, Mj_render = False):
 	control_vector_length=sim.data.ctrl.__len__()
 	print("control_vector_length "+str(control_vector_length))
 
-	timestep=0.005
-	number_of_task_samples=task_kinematics.shape[0]
+	number_of_task_samples=est_task_activations.shape[0]
 
 	real_task_kinematics=np.zeros((number_of_task_samples,6))
 	real_task_activations=np.zeros((number_of_task_samples,3))
-
+	chassis_pos=np.array([])
 	#while True:
 	sim.set_state(sim_state)
 	for ii in range(number_of_task_samples):
@@ -313,6 +337,7 @@ def run_task_fcn(task_kinematics, est_task_activations, Mj_render = False):
 	    	sim.data.qacc[0],
 	    	sim.data.qpos[1], sim.data.qvel[1],
 	    	sim.data.qacc[1]])
+	    chassis_pos=np.append(chassis_pos,sim.data.get_geom_xpos("Chassis_frame")[0])
 	    real_task_kinematics[ii,:]=current_kinematics_array
 	    real_task_activations[ii,:]=sim.data.ctrl
 	    if Mj_render:
@@ -333,7 +358,7 @@ def run_task_fcn(task_kinematics, est_task_activations, Mj_render = False):
 	# plt.subplot(6, 1, 6)
 	# plt.plot(range(number_of_task_samples), task_kinematics[:,5], range(number_of_task_samples), real_task_kinematics[:,5])
 	# plt.show(block=False)
-	return real_task_kinematics, real_task_activations
+	return real_task_kinematics, real_task_activations, chassis_pos
 	 #   if os.getenv('TESTING') is not None:
  #       break
 def error_cal_fcn(input1, input2):
