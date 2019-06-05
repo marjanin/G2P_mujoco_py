@@ -1,10 +1,12 @@
 from mujoco_py import load_model_from_path, MjSim, MjViewer
 import numpy as np
+from scipy import signal
 from sklearn.neural_network import MLPRegressor
 from matplotlib import pyplot as plt
 #import pickle
 import os
-
+################################################
+#Functions for main tests
 def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, number_of_refinements=10):
 	cum_kinematics = babbling_kinematics
 	cum_activations = babbling_activations
@@ -47,7 +49,91 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	plt.show()
 	errors=np.concatenate([[error0], [error1]],axis=0)
 	return model, errors
+################################################
+#Higher level control functions
+def gen_features_fcn(prev_reward, **kwargs):
+	#import pdb; pdb.set_trace()
+	reward_thresh = 10
+	feat_min = 0.1
+	feat_max = 0.9
+	sigma=.00001 # should be inversly proportional to reward
+	if ("prev_features" in kwargs):
+		prev_features = kwargs["prev_features"]
+	elif ("feat_vec_length" in kwargs):
+		prev_features = np.random.uniform(feat_min,feat_max,kwargs["feat_vec_length"])
+	else:
+		raise NameError('Either prev_features or feat_vec_length needs to be provided')
+	if prev_reward<reward_thresh:
+		new_features = np.random.uniform(feat_min,feat_max,kwargs["feat_vec_length"])	
+	else:
+		new_features = np.zeros(prev_features.shape[0],)
+		for ii in range(prev_features.shape[0]):
+			new_features[ii] = np.random.normal(prev_features[ii],sigma)
+		new_features = np.maximum(new_features, feat_min*np.ones(prev_features.shape[0],))
+		new_features = np.minimum(new_features, feat_max*np.ones(prev_features.shape[0],))
+	return new_features
 
+
+def feat_to_positions_fcn(features):
+	each_feature_length = 30 # each cycle duration in seconds/timestep
+	number_of_features = features.shape[0]
+	feat_angles = np.linspace(0, 2*np.pi*(number_of_features/(number_of_features+1)), number_of_features)
+	q0_raw = features*np.sin(feat_angles)
+	q1_raw = features*np.cos(feat_angles)
+	q0_scaled = (q0_raw*np.pi/3)
+	q1_scaled = -1*((q1_raw*np.pi/4)+(np.pi/4)) # since the mujoco model goes from 0 to -pi/2
+	q0_scaled_extended = np.append(q0_scaled, q0_scaled[0])
+	q1_scaled_extended = np.append(q1_scaled, q1_scaled[0])
+
+	q0_scaled_extended_long = np.array([])
+	q1_scaled_extended_long = np.array([])
+	for ii in range(features.shape[0]):
+		q0_scaled_extended_long = np.append(
+			q0_scaled_extended_long, np.linspace(
+				q0_scaled_extended[ii], q0_scaled_extended[ii+1], each_feature_length))
+		q1_scaled_extended_long = np.append(
+			q1_scaled_extended_long, np.linspace(
+				q1_scaled_extended[ii], q1_scaled_extended[ii+1], each_feature_length))
+	q0_scaled_extended_long_3 = np.concatenate(
+		[q0_scaled_extended_long[:-1], q0_scaled_extended_long[:-1], q0_scaled_extended_long])
+	q1_scaled_extended_long_3 = np.concatenate(
+		[q1_scaled_extended_long[:-1], q1_scaled_extended_long[:-1], q1_scaled_extended_long])
+
+	fir_filter_length = int(np.round(each_feature_length/2))
+	b=np.ones(fir_filter_length,)/fir_filter_length # a simple moving average filter > users can 
+	#change these if they need smoother pattern
+	a=1
+	q0_filtered_3 = signal.filtfilt(b, a, q0_scaled_extended_long_3)
+	q1_filtered_3 = signal.filtfilt(b, a, q1_scaled_extended_long_3)
+
+	q0_filtered = q0_filtered_3[q0_scaled_extended_long.shape[0]:2*q0_scaled_extended_long.shape[0]-1] # length = 1999 (the 
+	#very last was ommited since it is going to be the first one on the next cycle)
+	q1_filtered = q1_filtered_3[q1_scaled_extended_long.shape[0]:2*q1_scaled_extended_long.shape[0]-1]
+	plt.figure()
+	plt.scatter(q0_scaled, q1_scaled)
+	plt.plot(q0_filtered, q1_filtered)
+	plt.xlabel = "q0"
+	plt.ylabel = "q1"
+	plt.show(block=True)
+	return q0_filtered, q1_filtered
+
+def positions_to_kinematics(q0, q1, timestep):
+	kinematics=np.transpose(
+	np.concatenate(
+		(
+			[[q0],
+			[np.gradient(q0)/timestep],
+			[np.gradient(np.gradient(q0)/timestep)/timestep],
+			[q1],
+			[np.gradient(q1)/timestep],
+			[np.gradient(np.gradient(q1)/timestep)/timestep]]),
+		axis=0
+		)
+	)
+	return kinematics
+
+################################################
+#Lower level control functions
 def babbling_fcn(simulation_minutes = 5 ):
 	"""
 	this function babbles in the mujoco environment and then

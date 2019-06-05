@@ -1,9 +1,13 @@
 import numpy as np
 
-z1 = np.ones(6,)*8
-z2 = np.array([0,2,0,2,0,2])
+from scipy import signal
 
-print(np.minimum(z1,z2))
-print(np.maximum(z1,z2))
-print(np.min([2,3]))
 
+t = np.linspace(0, 1.0, 2001)
+xlow = np.sin(2 * np.pi * 5 * t)
+xhigh = np.sin(2 * np.pi * 250 * t)
+x = xlow + xhigh
+
+b, a = signal.butter(8, 0.125)
+y = signal.filtfilt(b, a, x, padlen=150)
+np.abs(y - xlow).max()
