@@ -12,7 +12,7 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	cum_kinematics = babbling_kinematics
 	cum_activations = babbling_activations
 	task_kinematics = create_sin_cos_kinematics_fcn(task_length=10, number_of_cycles=7)
-	#kinematics_show(task_kinematics)
+	kinematics_show(task_kinematics)
 	est_task_activations = estimate_activations_fcn(model=model, desired_kinematics=task_kinematics)
 	[real_task_kinematics, real_task_activations, chassis_pos] = run_task_fcn(est_task_activations)
 	error0=error_cal_fcn(task_kinematics[:,0], real_task_kinematics[:,0])
@@ -55,10 +55,10 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 #Higher level control functions
 def gen_features_fcn(prev_reward, **kwargs):
 	#import pdb; pdb.set_trace()
-	reward_thresh = 1.7
-	feat_min = 0.1
+	reward_thresh = 7.5
+	feat_min = 0.4
 	feat_max = 0.9
-	sigma=.1 # should be inversly proportional to reward
+	sigma=.01 # should be inversly proportional to reward
 	if ("prev_features" in kwargs):
 		prev_features = kwargs["prev_features"]
 	elif ("feat_vec_length" in kwargs):
@@ -81,9 +81,9 @@ def feat_to_positions_fcn(features, timestep=0.005, cycle_duration_in_seconds = 
 	each_feature_length =  int(np.round((cycle_duration_in_seconds/number_of_features)/timestep))
 	feat_angles = np.linspace(0, 2*np.pi*(number_of_features/(number_of_features+1)), number_of_features)
 	q0_raw = features*np.sin(feat_angles)
-	q1_raw = -1*features*np.cos(feat_angles)
+	q1_raw = features*np.cos(feat_angles)
 	q0_scaled = (q0_raw*np.pi/3)
-	q1_scaled = -1*((q1_raw*np.pi/4)+(np.pi/4)) # since the mujoco model goes from 0 to -pi/2
+	q1_scaled = -1*((-1*q1_raw+1)/2)*(np.pi/2) # since the mujoco model goes from 0 to -pi/2
 	q0_scaled_extended = np.append(q0_scaled, q0_scaled[0])
 	q1_scaled_extended = np.append(q1_scaled, q1_scaled[0])
 
