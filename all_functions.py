@@ -201,7 +201,7 @@ def babbling_fcn(simulation_minutes=5):
 	sim.set_state(sim_state)
 	max_in = 1
 	min_in = 0
-	pass_chance = timestep/5
+	pass_chance = timestep
 	motor1_act = \
 	systemID_input_gen_fcn(
 		signal_duration_in_seconds=simulation_time, pass_chance=pass_chance, max_in=max_in, min_in=min_in, timestep=timestep)

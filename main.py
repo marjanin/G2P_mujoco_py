@@ -14,7 +14,7 @@ cum_activations = babbling_activations
 pickle.dump([model,cum_kinematics, cum_activations],open("results/mlp_model.sav", 'wb'))
 [model,cum_kinematics, cum_activations] = pickle.load(open("results/mlp_model.sav", 'rb')) # loading the model
 
-run_mode=1
+run_mode=2
 
 if run_mode==1:
 	[model, errors, cum_kinematics, cum_activations] =\
@@ -31,7 +31,7 @@ else:
 		cum_kinematics=cum_kinematics,
 		cum_activations=cum_activations,
 		refinement=False,
-		Mj_render=True)
+		Mj_render=False)
 
 input("End of the simulation; press anykey to exit")
 #import pdb; pdb.set_trace()
