@@ -8,10 +8,11 @@ from matplotlib import pyplot as plt
 import os
 ################################################
 #Functions for main tests
-def learn_to_move_fcn(model, Mj_render=False):
+def learn_to_move_fcn(model, cum_kinematics, cum_activations, refinement = False, Mj_render = False):
 	reward_thresh = 8
 	prev_reward = np.array([0])
 	best_reward_so_far = prev_reward
+	best_model= model
 	all_rewards = prev_reward
 	exploitation_run_no = 0
 	new_features = gen_features_fcn(prev_reward=prev_reward, reward_thresh=reward_thresh, best_reward_so_far=best_reward_so_far, feat_vec_length=10)
@@ -22,12 +23,19 @@ def learn_to_move_fcn(model, Mj_render=False):
 		new_features = gen_features_fcn(prev_reward=prev_reward, reward_thresh=reward_thresh, best_reward_so_far=best_reward_so_far, prev_features=best_features_so_far)# .9*np.ones([9,])#
 		[prev_reward, attempt_kinematics, est_attempt_activations, real_attempt_kinematics, real_attempt_activations] = \
 			feat_to_run_attempt_fcn(features=new_features, model=model,feat_show=False, chassis_fix=False)
+		[cum_kinematics, cum_activations] = \
+		concatinate_data_fcn(
+			cum_kinematics, cum_activations, real_attempt_kinematics, real_attempt_activations, throw_percentage = 0.20)
+		if refinement:
+			model = inverse_mapping_fcn(cum_kinematics, cum_activations, model=model)
 		all_rewards = np.append(all_rewards, prev_reward)
 		if prev_reward>best_reward_so_far:
 			best_reward_so_far = prev_reward
 			best_features_so_far = new_features
+			best_model= model
 		print("best reward so far: ", best_reward_so_far)
-	feat_to_run_attempt_fcn(features=best_features_so_far, model=model, feat_show=True, Mj_render=Mj_render)
+	input("Learning to walk completed, Press any key to proceed")
+	feat_to_run_attempt_fcn(features=best_features_so_far, model=best_model, feat_show=True, Mj_render=Mj_render)
 	kinematics_activations_show_fcn(vs_time=True, kinematics=real_attempt_kinematics)
 	print("all_reward: ", all_rewards)
 	return best_reward_so_far, all_rewards
@@ -82,7 +90,7 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	plt.xlabel("Sample #")
 	plt.show()
 	errors=np.concatenate([[error0], [error1]],axis=0)
-	return model, errors
+	return model, errors, cum_kinematics, cum_activations
 ################################################
 #Higher level control functions
 def gen_features_fcn(prev_reward, reward_thresh, best_reward_so_far, **kwargs):
