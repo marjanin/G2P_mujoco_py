@@ -27,7 +27,8 @@ def learn_to_move_fcn(model, Mj_render=False):
 			best_reward_so_far = prev_reward
 			best_features_so_far = new_features
 		print("best reward so far: ", best_reward_so_far)
-	feat_to_run_attempt_fcn(features=best_features_so_far, model=model,feat_show=False, Mj_render=Mj_render)
+	feat_to_run_attempt_fcn(features=best_features_so_far, model=model, feat_show=True, Mj_render=Mj_render)
+	kinematics_activations_show_fcn(vs_time=True, kinematics=real_attempt_kinematics)
 	print("all_reward: ", all_rewards)
 	return best_reward_so_far, all_rewards
 
@@ -54,8 +55,7 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 		if ii+1 == number_of_refinements:
 			Mj_render = True
 		print("Refinement_no", ii+1)
-		cum_kinematics = np.concatenate([cum_kinematics, real_attempt_kinematics])
-		cum_activations = np.concatenate([cum_activations, real_attempt_activations])
+		[cum_kinematics, cum_activations] = concatinate_data_fcn(cum_kinematics, cum_activations, real_attempt_kinematics, real_attempt_activations)
 		model = inverse_mapping_fcn(kinematics=cum_kinematics, activations=cum_activations, prior_model=model)
 		est_attempt_activations = estimate_activations_fcn(model=model, desired_kinematics=attempt_kinematics)
 		[real_attempt_kinematics, real_attempt_activations, chassis_pos] = run_activations_fcn(est_attempt_activations, Mj_render=Mj_render)
@@ -71,13 +71,13 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	plt.plot(range(error1.shape[0]), error1)
 	plt.ylabel("q1 error in rads")
 	plt.xlabel("Refinement #")
-	# plotting desired vs real joint positions after refinements 
+	# plotting desired vs real joint positions after refinements
 	plt.figure()
 	plt.subplot(2, 1, 1)
-	plt.plot(range(attempt_kinematics.shape[0]), attempt_kinematics[:,0], range(attempt_kinematics.shape[0]), attempt_kinematics[:,0])
+	plt.plot(range(attempt_kinematics.shape[0]), real_attempt_kinematics[:,0], range(attempt_kinematics.shape[0]), attempt_kinematics[:,0])
 	plt.ylabel("q0 desired vs. simulated")
 	plt.subplot(2, 1, 2)
-	plt.plot(range(attempt_kinematics.shape[0]), attempt_kinematics[:,3], range(attempt_kinematics.shape[0]), attempt_kinematics[:,3])
+	plt.plot(range(attempt_kinematics.shape[0]), real_attempt_kinematics[:,3], range(attempt_kinematics.shape[0]), attempt_kinematics[:,3])
 	plt.ylabel("q1  desired vs. simulated")
 	plt.xlabel("Sample #")
 	plt.show()
@@ -153,6 +153,14 @@ def feat_to_positions_fcn(features, timestep=0.005, cycle_duration_in_seconds = 
 def step_to_attempt_kinematics_fcn(step_kinematics, number_of_steps_in_an_attempt = 10):
 	attempt_kinematics=np.matlib.repmat(step_kinematics,number_of_steps_in_an_attempt,1)
 	return(attempt_kinematics)
+
+def concatinate_data_fcn( cum_kinematics, cum_activations, kinematics, activations, throw_percentage = 0.20):
+	size_of_incoming_data = kinematics.shape[0]
+	samples_to_throw = int(np.round(throw_percentage*size_of_incoming_data))
+	cum_kinematics = np.concatenate([cum_kinematics, kinematics[samples_to_throw:,:]])
+	cum_activations = np.concatenate([cum_activations, activations[samples_to_throw:,:]])
+	return cum_kinematics, cum_activations
+
 ################################################
 #Lower level control functions
 def babbling_fcn(simulation_minutes = 5 ):
@@ -177,43 +185,45 @@ def babbling_fcn(simulation_minutes = 5 ):
 
 	run_samples=int(np.round(simulation_time/timestep))
 	babble_phase_samples=int(np.round(babble_phase_time/timestep))
-	babbling_kinematics=np.zeros((run_samples,6))
+	babbling_positions=np.zeros((run_samples,2))
 	babbling_activations=np.zeros((run_samples,3))
 
 	#while True:
 	sim.set_state(sim_state)
 	for ii in range(run_samples):
-	    current_kinematics_array=np.array(
-	    	[sim.data.qpos[0],
-	    	sim.data.qvel[0],
-	    	0, sim.data.qpos[1],
-	    	sim.data.qvel[1],
-	    	0])
+	    # current_kinematics_array=np.array(
+	    # 	[sim.data.qpos[0],
+	    # 	sim.data.qvel[0],
+	    # 	0, sim.data.qpos[1],
+	    # 	sim.data.qvel[1],
+	    # 	0])
 	    if (ii%babble_phase_samples)==0:
 	        sim.data.ctrl[:] = np.random.uniform(0,1,control_vector_length)
 	    sim.step()
-	    babbling_kinematics[ii,:]=current_kinematics_array
+	    babbling_positions[ii,:]=sim.data.qpos
 	    babbling_activations[ii,:]=sim.data.ctrl
 	    #viewer.render()
     # adding acceleration
-	babbling_kinematics = np.transpose(
-		np.concatenate(
-			(
-				[babbling_kinematics[:,0]],
-				[babbling_kinematics[:,1]],
-				[np.gradient(babbling_kinematics[:,1])/timestep],
-				[babbling_kinematics[:,3]],
-				[babbling_kinematics[:,4]],
-				[np.gradient(babbling_kinematics[:,4])/timestep]),
-			axis=0)
-		)
+	babbling_kinematics = positions_to_kinematics_fcn(
+		babbling_positions[:,0], babbling_positions[:,1], timestep)
+	# babbling_kinematics = np.transpose(
+	# 	np.concatenate(
+	# 		(
+	# 			[babbling_kinematics[:,0]],
+	# 			[np.gradient(babbling_kinematics[:,0])/timestep],
+	# 			[np.gradient(np.gradient(babbling_kinematics[:,0]))/timestep/timestep],
+	# 			[babbling_kinematics[:,3]],
+	# 			[np.gradient(babbling_kinematics[:,3])/timestep],
+	# 			[np.gradient(np.gradient(babbling_kinematics[:,3]))/timestep/timestep]),
+	# 		axis=0)
+	# 	)
 	print("min and max joint 0, min and max joint 1:")
 	print(
 		np.min(babbling_kinematics[:,0]),
 		np.max(babbling_kinematics[:,0]),
 		np.min(babbling_kinematics[:,3]),
 		np.max(babbling_kinematics[:,3]))
-	return babbling_kinematics, babbling_activations
+	return babbling_kinematics[1000:,:], babbling_activations[1000:,:]
 	#np.save("babbling_kinematics",babbling_kinematics)
 	#np.save("babbling_activations",babbling_activations)
 
@@ -258,7 +268,7 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 	return model
 	#import pdb; pdb.set_trace()
 
-def positions_to_kinematics_fcn(q0, q1, timestep):
+def positions_to_kinematics_fcn(q0, q1, timestep = 0.005):
 	kinematics=np.transpose(
 	np.concatenate(
 		(
@@ -380,26 +390,30 @@ def run_activations_fcn(est_activations, chassis_fix=True, timestep=0.005, Mj_re
 
 	number_of_task_samples=est_activations.shape[0]
 
-	real_attempt_kinematics=np.zeros((number_of_task_samples,6))
-	real_attempt_activations=np.zeros((number_of_task_samples,3))
+	real_attempt_positions = np.zeros((number_of_task_samples,2))
+	real_attempt_activations = np.zeros((number_of_task_samples,3))
 	chassis_pos=np.array([])
 	sim.set_state(sim_state)
 	for ii in range(number_of_task_samples):
-	    sim.data.ctrl[:]=est_activations[ii,:]
+	    sim.data.ctrl[:] = est_activations[ii,:]
 	    sim.step()
-	    current_kinematics_array=np.array(
-	    	[sim.data.qpos[0],
-	    	sim.data.qvel[0],
-	    	sim.data.qacc[0],
-	    	sim.data.qpos[1],
-	    	sim.data.qvel[1],
-	    	sim.data.qacc[1]]
-	    	)
+	    current_positions_array = sim.data.qpos[-2:]
+
+	    # current_kinematics_array=np.array(
+	    # 	[sim.data.qpos[0],
+	    # 	sim.data.qvel[0],
+	    # 	sim.data.qacc[0],
+	    # 	sim.data.qpos[1],
+	    # 	sim.data.qvel[1],
+	    # 	sim.data.qacc[1]]
+	    # 	)
 	    chassis_pos=np.append(chassis_pos,sim.data.get_geom_xpos("Chassis_frame")[0])
-	    real_attempt_kinematics[ii,:]=current_kinematics_array
-	    real_attempt_activations[ii,:]=sim.data.ctrl
+	    real_attempt_positions[ii,:] = current_positions_array
+	    real_attempt_activations[ii,:] = sim.data.ctrl
 	    if Mj_render:
 	    	viewer.render()
+	real_attempt_kinematics = positions_to_kinematics_fcn(
+		real_attempt_positions[:,0], real_attempt_positions[:,1], timestep = 0.005)
 	return real_attempt_kinematics, real_attempt_activations, chassis_pos
 
 def error_cal_fcn(input1, input2):
