@@ -23,6 +23,9 @@ def learn_to_move_fcn(model, cum_kinematics, cum_activations, refinement = False
 		new_features = gen_features_fcn(prev_reward=prev_reward, reward_thresh=reward_thresh, best_reward_so_far=best_reward_so_far, prev_features=best_features_so_far)# .9*np.ones([9,])#
 		[prev_reward, attempt_kinematics, est_attempt_activations, real_attempt_kinematics, real_attempt_activations] = \
 			feat_to_run_attempt_fcn(features=new_features, model=model,feat_show=False, chassis_fix=False)
+		
+		#kinematics_activations_show_fcn(vs_time=True, kinematics=attempt_kinematics,activations=est_attempt_activations)
+		#kinematics_activations_show_fcn(vs_time=True, kinematics=real_attempt_kinematics,activations=real_attempt_activations)
 		[cum_kinematics, cum_activations] = \
 		concatinate_data_fcn(
 			cum_kinematics, cum_activations, real_attempt_kinematics, real_attempt_activations, throw_percentage = 0.20)
@@ -49,7 +52,7 @@ def feat_to_run_attempt_fcn(features, model,feat_show=False,Mj_render=False, cha
 	prev_reward = chassis_pos[-1]
 	return prev_reward, attempt_kinematics, est_attempt_activations, real_attempt_kinematics, real_attempt_activations
 
-def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, number_of_refinements=10):
+def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, number_of_refinements=10, Mj_render=False):
 	cum_kinematics = babbling_kinematics
 	cum_activations = babbling_activations
 	attempt_kinematics = create_sin_cos_kinematics_fcn(attempt_length=10, number_of_cycles=7)
@@ -58,7 +61,6 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	[real_attempt_kinematics, real_attempt_activations, chassis_pos] = run_activations_fcn(est_attempt_activations)
 	error0=error_cal_fcn(attempt_kinematics[:,0], real_attempt_kinematics[:,0])
 	error1=error_cal_fcn(attempt_kinematics[:,3], real_attempt_kinematics[:,3])
-	Mj_render = False
 	for ii in range(number_of_refinements):
 		if ii+1 == number_of_refinements:
 			Mj_render = True
@@ -171,60 +173,83 @@ def concatinate_data_fcn( cum_kinematics, cum_activations, kinematics, activatio
 
 ################################################
 #Lower level control functions
-def babbling_fcn(simulation_minutes = 5 ):
+def babbling_fcn(simulation_minutes=5):
 	"""
 	this function babbles in the mujoco environment and then
 	returns input outputs (actuation values and kinematics)
 	"""
-	np.random.seed(0) # to get consistent results for debugging purposes
+	np.random.seed(2) # to get consistent results for debugging purposes
 
 	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/mujoco-py/xmls/nmi_leg_w_chassis_fixed.xml")
 	sim = MjSim(model)
 
-	#viewer = MjViewer(sim)
+	# viewer = MjViewer(sim)
 	sim_state = sim.get_state()
 
 	control_vector_length=sim.data.ctrl.__len__()
-	print("control_vector_length: "+str(control_vector_length))
-	simulation_minutes
+	# print("control_vector_length: "+str(control_vector_length))
 	simulation_time=simulation_minutes*60.0
 	timestep=0.005
-	babble_phase_time=3
+	# babble_phase_time=3
 
 	run_samples=int(np.round(simulation_time/timestep))
-	babble_phase_samples=int(np.round(babble_phase_time/timestep))
-	babbling_positions=np.zeros((run_samples,2))
-	babbling_activations=np.zeros((run_samples,3))
+	# babble_phase_samples=int(np.round(babble_phase_time/timestep))
+	# babbling_positions=np.zeros((run_samples,2))
+	# babbling_activations=np.zeros((run_samples,3))
 
 	#while True:
 	sim.set_state(sim_state)
-	for ii in range(run_samples):
-	    # current_kinematics_array=np.array(
-	    # 	[sim.data.qpos[0],
-	    # 	sim.data.qvel[0],
-	    # 	0, sim.data.qpos[1],
-	    # 	sim.data.qvel[1],
-	    # 	0])
-	    if (ii%babble_phase_samples)==0:
-	        sim.data.ctrl[:] = np.random.uniform(0,1,control_vector_length)
-	    sim.step()
-	    babbling_positions[ii,:]=sim.data.qpos
-	    babbling_activations[ii,:]=sim.data.ctrl
-	    #viewer.render()
-    # adding acceleration
-	babbling_kinematics = positions_to_kinematics_fcn(
-		babbling_positions[:,0], babbling_positions[:,1], timestep)
-	# babbling_kinematics = np.transpose(
-	# 	np.concatenate(
-	# 		(
-	# 			[babbling_kinematics[:,0]],
-	# 			[np.gradient(babbling_kinematics[:,0])/timestep],
-	# 			[np.gradient(np.gradient(babbling_kinematics[:,0]))/timestep/timestep],
-	# 			[babbling_kinematics[:,3]],
-	# 			[np.gradient(babbling_kinematics[:,3])/timestep],
-	# 			[np.gradient(np.gradient(babbling_kinematics[:,3]))/timestep/timestep]),
-	# 		axis=0)
-	# 	)
+	max_in = 1
+	min_in = 0
+	pass_chance = timestep/5
+	motor1_act = \
+	systemID_input_gen_fcn(
+		signal_duration_in_seconds=simulation_time, pass_chance=pass_chance, max_in=max_in, min_in=min_in, timestep=timestep)
+	motor2_act = \
+	systemID_input_gen_fcn(
+		signal_duration_in_seconds=simulation_time, pass_chance=pass_chance, max_in=max_in, min_in=min_in, timestep=timestep)
+	motor3_act = \
+	systemID_input_gen_fcn(
+		signal_duration_in_seconds=simulation_time, pass_chance=pass_chance, max_in=max_in, min_in=min_in, timestep=timestep)
+	babbling_activations = np.transpose(
+		np.concatenate(
+			[[motor1_act],[motor2_act],[motor3_act]],
+			axis=0)
+		)
+	kinematics_activations_show_fcn(activations=babbling_activations)
+	[babbling_kinematics, babbling_activations, chassis_pos] = \
+	run_activations_fcn(
+		babbling_activations, chassis_fix=True, timestep=0.005, Mj_render=False
+		)
+
+	# for ii in range(run_samples):
+	#     # # current_kinematics_array=np.array(
+	#     # # 	[sim.data.qpos[0],
+	#     # # 	sim.data.qvel[0],
+	#     # # 	0, sim.data.qpos[1],
+	#     # # 	sim.data.qvel[1],
+	#     # # 	0])
+	#     # if (ii%babble_phase_samples)==0:
+	#     #     sim.data.ctrl[:] = np.random.uniform(0,1,control_vector_length)
+	#     sim.data.ctrl[:] = babbling_activations[ii,:]
+	#     sim.step()
+	#     babbling_positions[ii,:]=sim.data.qpos
+	#     babbling_activations[ii,:]=sim.data.ctrl
+	#     # viewer.render()
+ #    # adding acceleration
+	# babbling_kinematics = positions_to_kinematics_fcn(
+	# 	babbling_positions[:,0], babbling_positions[:,1], timestep)
+	# # babbling_kinematics = np.transpose(
+	# # 	np.concatenate(
+	# # 		(
+	# # 			[babbling_kinematics[:,0]],
+	# # 			[np.gradient(babbling_kinematics[:,0])/timestep],
+	# # 			[np.gradient(np.gradient(babbling_kinematics[:,0]))/timestep/timestep],
+	# # 			[babbling_kinematics[:,3]],
+	# # 			[np.gradient(babbling_kinematics[:,3])/timestep],
+	# # 			[np.gradient(np.gradient(babbling_kinematics[:,3]))/timestep/timestep]),
+	# # 		axis=0)
+	# # 	)
 	print("min and max joint 0, min and max joint 1:")
 	print(
 		np.min(babbling_kinematics[:,0]),
@@ -234,6 +259,20 @@ def babbling_fcn(simulation_minutes = 5 ):
 	return babbling_kinematics[1000:,:], babbling_activations[1000:,:]
 	#np.save("babbling_kinematics",babbling_kinematics)
 	#np.save("babbling_activations",babbling_activations)
+
+def systemID_input_gen_fcn(signal_duration_in_seconds, pass_chance, max_in, min_in, timestep):
+	number_of_samples = int(np.round(signal_duration_in_seconds/timestep))
+	samples = np.linspace(
+		0, signal_duration_in_seconds, number_of_samples)
+	gen_input = np.zeros(number_of_samples,)*min_in
+
+	for ii in range(1, number_of_samples):
+		pass_rand = np.random.uniform(0,1,1)
+		if pass_rand < pass_chance:
+			gen_input[ii] = ((max_in-min_in)*np.random.uniform(0,1,1)) + min_in
+		else:
+			gen_input[ii] = gen_input[ii-1]
+	return gen_input
 
 def inverse_mapping_fcn(kinematics, activations, **kwargs):
 	"""
@@ -253,7 +292,12 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 	if ("prior_model" in kwargs):
 		model=kwargs["prior_model"]
 	else:
-		model = MLPRegressor(hidden_layer_sizes=15, activation = "logistic",  verbose = True, warm_start = True)
+		model = MLPRegressor(
+			hidden_layer_sizes=15,
+			activation="logistic",
+			verbose=True,
+			warm_start=True,
+			early_stopping=False)
 
 	model.fit(kinematics_train, activations_train)
 	#pickle.dump(model,open("mlp_model.sav", 'wb'))
@@ -300,7 +344,7 @@ def kinematics_activations_show_fcn(vs_time=False, timestep=0.005, **kwargs):
 		sample_no_kinematics = kinematics.shape[0]
 	if ("activations" in kwargs):
 		activations = kwargs["activations"]
-		sample_no_activations = kinematics.shape[0]
+		sample_no_activations = activations.shape[0]
 	if not (("kinematics" in kwargs) or ("activations" in kwargs)):
 		raise NameError('Either kinematics or activations needs to be provided')
 	if (sample_no_kinematics!=0) & (sample_no_activations!=0) & (sample_no_kinematics!=sample_no_activations):
@@ -394,13 +438,13 @@ def run_activations_fcn(est_activations, chassis_fix=True, timestep=0.005, Mj_re
 		viewer = MjViewer(sim)
 	sim_state = sim.get_state()
 	control_vector_length=sim.data.ctrl.__len__()
-	print("control_vector_length "+str(control_vector_length))
+	print("control_vector_length: "+str(control_vector_length))
 
 	number_of_task_samples=est_activations.shape[0]
 
 	real_attempt_positions = np.zeros((number_of_task_samples,2))
 	real_attempt_activations = np.zeros((number_of_task_samples,3))
-	chassis_pos=np.array([])
+	chassis_pos=np.zeros(number_of_task_samples,)
 	sim.set_state(sim_state)
 	for ii in range(number_of_task_samples):
 	    sim.data.ctrl[:] = est_activations[ii,:]
@@ -415,7 +459,7 @@ def run_activations_fcn(est_activations, chassis_fix=True, timestep=0.005, Mj_re
 	    # 	sim.data.qvel[1],
 	    # 	sim.data.qacc[1]]
 	    # 	)
-	    chassis_pos=np.append(chassis_pos,sim.data.get_geom_xpos("Chassis_frame")[0])
+	    chassis_pos[ii]=sim.data.get_geom_xpos("Chassis_frame")[0]
 	    real_attempt_positions[ii,:] = current_positions_array
 	    real_attempt_activations[ii,:] = sim.data.ctrl
 	    if Mj_render:
