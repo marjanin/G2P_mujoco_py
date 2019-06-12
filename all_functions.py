@@ -8,8 +8,7 @@ from matplotlib import pyplot as plt
 import os
 ################################################
 #Functions for main tests
-def learn_to_move_fcn(model, cum_kinematics, cum_activations, refinement = False, Mj_render = False):
-	reward_thresh = 8
+def learn_to_move_fcn(model, cum_kinematics, cum_activations, reward_thresh=6, refinement = False, Mj_render = False):
 	prev_reward = np.array([0])
 	best_reward_so_far = prev_reward
 	best_model= model
@@ -29,13 +28,13 @@ def learn_to_move_fcn(model, cum_kinematics, cum_activations, refinement = False
 		[cum_kinematics, cum_activations] = \
 		concatinate_data_fcn(
 			cum_kinematics, cum_activations, real_attempt_kinematics, real_attempt_activations, throw_percentage = 0.20)
-		if refinement:
-			model = inverse_mapping_fcn(cum_kinematics, cum_activations, model=model)
 		all_rewards = np.append(all_rewards, prev_reward)
 		if prev_reward>best_reward_so_far:
 			best_reward_so_far = prev_reward
 			best_features_so_far = new_features
 			best_model= model
+		if refinement:
+			model = inverse_mapping_fcn(cum_kinematics, cum_activations, prior_model=model)
 		print("best reward so far: ", best_reward_so_far)
 	input("Learning to walk completed, Press any key to proceed")
 	feat_to_run_attempt_fcn(features=best_features_so_far, model=best_model, feat_show=True, Mj_render=Mj_render)
@@ -97,7 +96,7 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 #Higher level control functions
 def gen_features_fcn(prev_reward, reward_thresh, best_reward_so_far, **kwargs):
 	#import pdb; pdb.set_trace()
-	feat_min = 0.1
+	feat_min = 0.4
 	feat_max = 0.9
 	if ("prev_features" in kwargs):
 		prev_features = kwargs["prev_features"]
@@ -178,7 +177,7 @@ def babbling_fcn(simulation_minutes=5):
 	this function babbles in the mujoco environment and then
 	returns input outputs (actuation values and kinematics)
 	"""
-	np.random.seed(2) # to get consistent results for debugging purposes
+	np.random.seed(0) # to get consistent results for debugging purposes
 
 	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/mujoco-py/xmls/nmi_leg_w_chassis_fixed.xml")
 	sim = MjSim(model)
@@ -274,7 +273,7 @@ def systemID_input_gen_fcn(signal_duration_in_seconds, pass_chance, max_in, min_
 			gen_input[ii] = gen_input[ii-1]
 	return gen_input
 
-def inverse_mapping_fcn(kinematics, activations, **kwargs):
+def inverse_mapping_fcn(kinematics, activations, use_validation=True, **kwargs):
 	"""
 	this function used the babbling data to create an inverse mapping using a
 	MLP NN
@@ -297,7 +296,7 @@ def inverse_mapping_fcn(kinematics, activations, **kwargs):
 			activation="logistic",
 			verbose=True,
 			warm_start=True,
-			early_stopping=False)
+			early_stopping=use_validation)
 
 	model.fit(kinematics_train, activations_train)
 	#pickle.dump(model,open("mlp_model.sav", 'wb'))
