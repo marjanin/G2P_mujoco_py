@@ -5,14 +5,19 @@ import numpy as np
 from matplotlib import pyplot as plt
 from all_functions import *
 import pickle
+from warnings import simplefilter
 
-[babbling_kinematics, babbling_activations] = babbling_fcn(simulation_minutes=5)
-model = inverse_mapping_fcn(kinematics=babbling_kinematics, activations=babbling_activations)
-cum_kinematics = babbling_kinematics
-cum_activations = babbling_activations
+simplefilter(action='ignore', category=FutureWarning)
 
-pickle.dump([model,cum_kinematics, cum_activations],open("results/mlp_model.sav", 'wb'))
+# [babbling_kinematics, babbling_activations] = babbling_fcn(simulation_minutes=5)
+# model = inverse_mapping_fcn(kinematics=babbling_kinematics, activations=babbling_activations)
+# cum_kinematics = babbling_kinematics
+# cum_activations = babbling_activations
+
+# pickle.dump([model,cum_kinematics, cum_activations],open("results/mlp_model.sav", 'wb'))
 [model,cum_kinematics, cum_activations] = pickle.load(open("results/mlp_model.sav", 'rb')) # loading the model
+#np.random.seed(3)
+
 
 run_mode=2
 
@@ -20,8 +25,8 @@ if run_mode==1:
 	[model, errors, cum_kinematics, cum_activations] =\
 	in_air_adaptation_fcn(
 		model=model,
-		babbling_kinematics=babbling_kinematics,
-		babbling_activations=babbling_activations,
+		babbling_kinematics=cum_kinematics,
+		babbling_activations=cum_activations,
 		number_of_refinements=10,
 		Mj_render=False)
 else:
@@ -30,7 +35,7 @@ else:
 		model=model,
 		cum_kinematics=cum_kinematics,
 		cum_activations=cum_activations,
-		refinement=False,
+		refinement=True,
 		Mj_render=False)
 
 input("End of the simulation; press anykey to exit")

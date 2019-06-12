@@ -17,7 +17,7 @@
     </visual>
 
     <default>
-        <joint type="hinge" pos="0 0 0" axis="0 1 0" limited="true" damping="0" frictionloss="3" />
+        <joint type="hinge" pos="0 0 0" axis="0 1 0" limited="true" damping="1" frictionloss="3" />
         <tendon stiffness = "0"/>
         <muscle ctrllimited="true" ctrlrange="0 1" scale="5000"/>
     </default>
@@ -46,7 +46,7 @@
 
             <body pos="0 0 .5">
                 <joint name="Hip" range="-60 60"/>
-                <geom name="Hip" type="cylinder" pos="0 0 0" zaxis="0 1 0" size=".1 .05" rgba="1 1 1 .5" mass="0"/>
+                <geom name="Hip" type="cylinder" pos="0 0 0" zaxis="0 1 0" size=".1 .05" rgba="1 1 1 .5" mass="0.3"/>
                 
                 <geom name="L0" type="capsule" size="0.045" fromto="0 0 0  0 0 -.50" rgba=".7 .7 .7 1"/>
                 
@@ -62,7 +62,7 @@
 
                 <body pos="0 0 -.5">
                     <joint name="Knee" range="-90 0" ref="-45"/>
-                    <geom name="Knee" type="cylinder" pos="0 0 0" zaxis="0 1 0" size=".1 .05" rgba="1 1 1 .5" mass="0"/>
+                    <geom name="Knee" type="cylinder" pos="0 0 0" zaxis="0 1 0" size=".1 .05" rgba="1 1 1 .5" mass="0.3"/>
                     
                     <geom name="L1" type="capsule" size="0.045" fromto="0 0 0 0.34 0 -0.34" rgba=".7 .7 .7 1"/>
 
