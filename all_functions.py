@@ -20,7 +20,7 @@ def learn_to_move_fcn(model, cum_kinematics, cum_activations, reward_thresh=7, r
 	while exploitation_run_no<=15:
 		if best_reward_so_far>reward_thresh:
 			exploitation_run_no+=1
-		new_features = gen_features_fcn(prev_reward=prev_reward, reward_thresh=reward_thresh, best_reward_so_far=best_reward_so_far, prev_features=best_features_so_far)# .9*np.ones([9,])#
+		new_features = gen_features_fcn(reward_thresh=reward_thresh, best_reward_so_far=best_reward_so_far, best_features_so_far=best_features_so_far)# .9*np.ones([9,])#
 		[prev_reward, attempt_kinematics, est_attempt_activations, real_attempt_kinematics, real_attempt_activations] = \
 			feat_to_run_attempt_fcn(features=new_features, model=model,feat_show=False, chassis_fix=False)
 		
@@ -29,18 +29,20 @@ def learn_to_move_fcn(model, cum_kinematics, cum_activations, reward_thresh=7, r
 		[cum_kinematics, cum_activations] = \
 		concatinate_data_fcn(
 			cum_kinematics, cum_activations, real_attempt_kinematics, real_attempt_activations, throw_percentage = 0.20)
-		if refinement:
-			model = inverse_mapping_fcn(cum_kinematics, cum_activations, prior_model=model)
 		all_rewards = np.append(all_rewards, prev_reward)
 		if prev_reward>best_reward_so_far:
 			best_reward_so_far = prev_reward
 			best_features_so_far = new_features
 			best_model= model
+		if refinement:
+			model = inverse_mapping_fcn(cum_kinematics, cum_activations, prior_model=model)
 		print("best reward so far: ", best_reward_so_far)
 	input("Learning to walk completed, Press any key to proceed")
+	[prev_reward_best, attempt_kinematics_best, est_attempt_activations_best, real_attempt_kinematics_best, real_attempt_activations_best]= \
 	feat_to_run_attempt_fcn(features=best_features_so_far, model=best_model, feat_show=True, Mj_render=Mj_render)
 	kinematics_activations_show_fcn(vs_time=True, kinematics=real_attempt_kinematics)
 	print("all_reward: ", all_rewards)
+	print("prev_reward_best: ", prev_reward_best)
 	return best_reward_so_far, all_rewards
 
 def feat_to_run_attempt_fcn(features, model,feat_show=False,Mj_render=False, chassis_fix=False):
@@ -95,26 +97,26 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	return model, errors, cum_kinematics, cum_activations
 ################################################
 #Higher level control functions
-def gen_features_fcn(prev_reward, reward_thresh, best_reward_so_far, **kwargs):
+def gen_features_fcn(reward_thresh, best_reward_so_far, **kwargs):
 	#import pdb; pdb.set_trace()
 	feat_min = 0.5
 	feat_max = 0.9
-	if ("prev_features" in kwargs):
-		prev_features = kwargs["prev_features"]
+	if ("best_features_so_far" in kwargs):
+		best_features_so_far = kwargs["best_features_so_far"]
 	elif ("feat_vec_length" in kwargs):
-		prev_features = np.random.uniform(feat_min,feat_max,kwargs["feat_vec_length"])
+		best_features_so_far = np.random.uniform(feat_min,feat_max,kwargs["feat_vec_length"])
 	else:
-		raise NameError('Either prev_features or feat_vec_length needs to be provided')
+		raise NameError('Either best_features_so_far or feat_vec_length needs to be provided')
 	
-	if prev_reward<reward_thresh:
-		new_features = np.random.uniform(feat_min, feat_max, prev_features.shape[0])	
+	if best_reward_so_far<reward_thresh:
+		new_features = np.random.uniform(feat_min, feat_max, best_features_so_far.shape[0])	
 	else:
 		sigma= np.max([(12-best_reward_so_far)/100, 0.01])# should be inversly proportional to reward
-		new_features = np.zeros(prev_features.shape[0],)
-		for ii in range(prev_features.shape[0]):
-			new_features[ii] = np.random.normal(prev_features[ii],sigma)
-		new_features = np.maximum(new_features, feat_min*np.ones(prev_features.shape[0],))
-		new_features = np.minimum(new_features, feat_max*np.ones(prev_features.shape[0],))
+		new_features = np.zeros(best_features_so_far.shape[0],)
+		for ii in range(best_features_so_far.shape[0]):
+			new_features[ii] = np.random.normal(best_features_so_far[ii],sigma)
+		new_features = np.maximum(new_features, feat_min*np.ones(best_features_so_far.shape[0],))
+		new_features = np.minimum(new_features, feat_max*np.ones(best_features_so_far.shape[0],))
 	return new_features
 
 def feat_to_positions_fcn(features, timestep=0.005, cycle_duration_in_seconds = 1.3, show=False):

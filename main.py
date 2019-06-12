@@ -16,7 +16,7 @@ simplefilter(action='ignore', category=FutureWarning)
 
 # pickle.dump([model,cum_kinematics, cum_activations],open("results/mlp_model.sav", 'wb'))
 [model,cum_kinematics, cum_activations] = pickle.load(open("results/mlp_model.sav", 'rb')) # loading the model
-#np.random.seed(3)
+np.random.seed(4)
 
 
 run_mode=2
@@ -35,8 +35,8 @@ else:
 		model=model,
 		cum_kinematics=cum_kinematics,
 		cum_activations=cum_activations,
-		refinement=True,
-		Mj_render=False)
+		refinement=False,
+		Mj_render=True)
 
 input("End of the simulation; press anykey to exit")
 #import pdb; pdb.set_trace()
