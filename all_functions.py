@@ -57,6 +57,7 @@ def feat_to_run_attempt_fcn(features, model,feat_show=False,Mj_render=False, cha
 	return prev_reward, attempt_kinematics, est_attempt_activations, real_attempt_kinematics, real_attempt_activations
 
 def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, number_of_refinements=10, Mj_render=False):
+	Mj_render_last_run = False
 	cum_kinematics = babbling_kinematics
 	cum_activations = babbling_activations
 	attempt_kinematics = create_sin_cos_kinematics_fcn(attempt_length=10, number_of_cycles=7)
@@ -66,13 +67,13 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	error0=error_cal_fcn(attempt_kinematics[:,0], real_attempt_kinematics[:,0])
 	error1=error_cal_fcn(attempt_kinematics[:,3], real_attempt_kinematics[:,3])
 	for ii in range(number_of_refinements):
-		if ii+1 == number_of_refinements:
-			Mj_render = True
+		if (ii+1 == number_of_refinements) and (Mj_render==True):
+			Mj_render_last_run = True
 		print("Refinement_no", ii+1)
 		[cum_kinematics, cum_activations] = concatinate_data_fcn(cum_kinematics, cum_activations, real_attempt_kinematics, real_attempt_activations)
 		model = inverse_mapping_fcn(kinematics=cum_kinematics, activations=cum_activations, prior_model=model)
 		est_attempt_activations = estimate_activations_fcn(model=model, desired_kinematics=attempt_kinematics)
-		[real_attempt_kinematics, real_attempt_activations, chassis_pos] = run_activations_fcn(est_attempt_activations, Mj_render=Mj_render)
+		[real_attempt_kinematics, real_attempt_activations, chassis_pos] = run_activations_fcn(est_attempt_activations, Mj_render=Mj_render_last_run)
 		error0 = np.append(error0, error_cal_fcn(attempt_kinematics[:,0], real_attempt_kinematics[:,0]))
 		error1 = np.append(error1, error_cal_fcn(attempt_kinematics[:,3], real_attempt_kinematics[:,3]))
 	

@@ -19,7 +19,7 @@ simplefilter(action='ignore', category=FutureWarning)
 np.random.seed(4)
 
 
-run_mode=2
+run_mode=1
 
 if run_mode==1:
 	[model, errors, cum_kinematics, cum_activations] =\
@@ -37,7 +37,7 @@ else:
 		cum_activations=cum_activations,
 		reward_thresh=7,
 		refinement=True,
-		Mj_render=True)
+		Mj_render=False)
 
 input("End of the simulation; press anykey to exit")
 #import pdb; pdb.set_trace()
