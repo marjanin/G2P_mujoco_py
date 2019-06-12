@@ -6,6 +6,7 @@ from sklearn.neural_network import MLPRegressor
 from matplotlib import pyplot as plt
 #import pickle
 import os
+from copy import deepcopy
 ################################################
 #Functions for main tests
 def learn_to_move_fcn(model, cum_kinematics, cum_activations, reward_thresh=7, refinement = False, Mj_render = False):
@@ -33,7 +34,7 @@ def learn_to_move_fcn(model, cum_kinematics, cum_activations, reward_thresh=7, r
 		if prev_reward>best_reward_so_far:
 			best_reward_so_far = prev_reward
 			best_features_so_far = new_features
-			best_model= model
+			best_model = deepcopy(model)
 		if refinement:
 			model = inverse_mapping_fcn(cum_kinematics, cum_activations, prior_model=model)
 		print("best reward so far: ", best_reward_so_far)
@@ -43,6 +44,7 @@ def learn_to_move_fcn(model, cum_kinematics, cum_activations, reward_thresh=7, r
 	kinematics_activations_show_fcn(vs_time=True, kinematics=real_attempt_kinematics)
 	print("all_reward: ", all_rewards)
 	print("prev_reward_best: ", prev_reward_best)
+	#import pdb; pdb.set_trace()
 	return best_reward_so_far, all_rewards
 
 def feat_to_run_attempt_fcn(features, model,feat_show=False,Mj_render=False, chassis_fix=False):
@@ -99,7 +101,7 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 #Higher level control functions
 def gen_features_fcn(reward_thresh, best_reward_so_far, **kwargs):
 	#import pdb; pdb.set_trace()
-	feat_min = 0.5
+	feat_min = 0.4
 	feat_max = 0.9
 	if ("best_features_so_far" in kwargs):
 		best_features_so_far = kwargs["best_features_so_far"]

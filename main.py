@@ -35,7 +35,8 @@ else:
 		model=model,
 		cum_kinematics=cum_kinematics,
 		cum_activations=cum_activations,
-		refinement=False,
+		reward_thresh=7,
+		refinement=True,
 		Mj_render=True)
 
 input("End of the simulation; press anykey to exit")
