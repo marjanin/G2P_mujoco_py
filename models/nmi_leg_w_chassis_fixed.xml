@@ -17,7 +17,7 @@
     </visual>
 
     <default>
-        <joint type="hinge" pos="0 0 0" axis="0 1 0" limited="true" damping="0" frictionloss="5" />
+        <joint type="hinge" pos="0 0 0" axis="0 1 0" limited="true" damping="0" frictionloss="3" />
         <tendon stiffness = "0"/>
         <muscle ctrllimited="true" ctrlrange="0 1" scale="5000"/>
     </default>
@@ -54,23 +54,23 @@
                 <site name="S_J0_1" pos="0.15 0 0" size="0.02" rgba="0.7 0.8 0.95 .1" group="1"/>
 
                 <site name="S_L0_1" pos="0.05 0 -.1" size="0.02"/>
-    			<site name="S_L0_0" pos="-0.05 0 -.1" size="0.02"/>
+                <site name="S_L0_0" pos="-0.05 0 -.1" size="0.02"/>
 
-    			<site name="S_L0_2" pos="-0.1 0 -.25" size="0.02"/>
-    			<site name="S_L0_3" pos=" 0.00 0 -.25" size="0.02"/>
+                <site name="S_L0_2" pos="-0.1 0 -.25" size="0.02"/>
+                <site name="S_L0_3" pos=" 0.00 0 -.25" size="0.02"/>
                 <site name="S_L_04" pos="+0.1 0 -.25" size="0.02"/>
 
                 <body pos="0 0 -.5">
-                	<joint name="Knee" range="-90 0" ref="-45"/>
-                	<geom name="Knee" type="cylinder" pos="0 0 0" zaxis="0 1 0" size=".1 .05" rgba="1 1 1 .5" mass="0"/>
-    		        
-    		        <geom name="L1" type="capsule" size="0.045" fromto="0 0 0 0.34 0 -0.34" rgba=".7 .7 .7 1"/>
+                    <joint name="Knee" range="-90 0" ref="-45"/>
+                    <geom name="Knee" type="cylinder" pos="0 0 0" zaxis="0 1 0" size=".1 .05" rgba="1 1 1 .5" mass="0"/>
+                    
+                    <geom name="L1" type="capsule" size="0.045" fromto="0 0 0 0.34 0 -0.34" rgba=".7 .7 .7 1"/>
 
                     <site name="S_J1_0" pos="-0.15 0 0" size="0.02" rgba="0.7 0.8 0.95 .1" group="1"/>
                     <site name="S_J1_1" pos="0.15 0 0" size="0.02" rgba="0.7 0.8 0.95 .1" group="1"/>
-                	
-    				<site name="S_L1_0" pos="-0.05 0 -.1" size="0.02"/>
-    		        <site name="S_L1_1" pos="0.05 0 -.1" size="0.02"/>
+                    
+                    <site name="S_L1_0" pos="-0.05 0 -.1" size="0.02"/>
+                    <site name="S_L1_1" pos="0.05 0 -.1" size="0.02"/>
 
                 </body>
             </body>
@@ -103,8 +103,8 @@
     </tendon>   
 
     <actuator>
-    	<muscle name="T_M0" tendon="T_M0"/>
-    	<muscle name="T_M1" tendon="T_M1"/>
-    	<muscle name="T_M2" tendon="T_M2"/>
+        <muscle name="T_M0" tendon="T_M0"/>
+        <muscle name="T_M1" tendon="T_M1"/>
+        <muscle name="T_M2" tendon="T_M2"/>
     </actuator>
 </mujoco>
