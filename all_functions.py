@@ -64,8 +64,9 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	kinematics_activations_show_fcn(vs_time=False, kinematics=attempt_kinematics)
 	est_attempt_activations = estimate_activations_fcn(model=model, desired_kinematics=attempt_kinematics)
 	[real_attempt_kinematics, real_attempt_activations, chassis_pos] = run_activations_fcn(est_attempt_activations)
-	error0=error_cal_fcn(attempt_kinematics[:,0], real_attempt_kinematics[:,0])
-	error1=error_cal_fcn(attempt_kinematics[:,3], real_attempt_kinematics[:,3])
+	error0 = error_cal_fcn(attempt_kinematics[:,0], real_attempt_kinematics[:,0])
+	error1 = error_cal_fcn(attempt_kinematics[:,3], real_attempt_kinematics[:,3])
+	average_error = (error0+error1)/2
 	for ii in range(number_of_refinements):
 		if (ii+1 == number_of_refinements) and (Mj_render==True):
 			Mj_render_last_run = True
@@ -76,15 +77,18 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 		[real_attempt_kinematics, real_attempt_activations, chassis_pos] = run_activations_fcn(est_attempt_activations, Mj_render=Mj_render_last_run)
 		error0 = np.append(error0, error_cal_fcn(attempt_kinematics[:,0], real_attempt_kinematics[:,0]))
 		error1 = np.append(error1, error_cal_fcn(attempt_kinematics[:,3], real_attempt_kinematics[:,3]))
-	
+		average_error = np.append(average_error, (error0[-1]+error1[-1])/2)
 	# plotting error plots
 	plt.figure()
-	plt.subplot(2, 1, 1)
+	plt.subplot(3, 1, 1)
 	plt.plot(range(error0.shape[0]), error0)
 	plt.ylabel("q0 error in rads")
-	plt.subplot(2, 1, 2)
+	plt.subplot(3, 1, 2)
 	plt.plot(range(error1.shape[0]), error1)
 	plt.ylabel("q1 error in rads")
+	plt.subplot(3, 1, 3)
+	plt.plot(range(average_error.shape[0]), average_error)
+	plt.ylabel("average in rads")
 	plt.xlabel("Refinement #")
 	# plotting desired vs real joint positions after refinements
 	plt.figure()
