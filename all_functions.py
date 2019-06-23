@@ -64,8 +64,8 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	kinematics_activations_show_fcn(vs_time=False, kinematics=attempt_kinematics)
 	est_attempt_activations = estimate_activations_fcn(model=model, desired_kinematics=attempt_kinematics)
 	[real_attempt_kinematics, real_attempt_activations, chassis_pos] = run_activations_fcn(est_attempt_activations)
-	error0 = error_cal_fcn(attempt_kinematics[:,0], real_attempt_kinematics[:,0])
-	error1 = error_cal_fcn(attempt_kinematics[:,3], real_attempt_kinematics[:,3])
+	error0 = np.array([error_cal_fcn(attempt_kinematics[:,0], real_attempt_kinematics[:,0])])
+	error1 = np.array([error_cal_fcn(attempt_kinematics[:,3], real_attempt_kinematics[:,3])])
 	average_error = (error0+error1)/2
 	for ii in range(number_of_refinements):
 		if (ii+1 == number_of_refinements) and (Mj_render==True):
@@ -81,13 +81,13 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	# plotting error plots
 	plt.figure()
 	plt.subplot(3, 1, 1)
-	plt.plot(range(error0.shape[0]), error0)
+	plt.plot(range(error0.shape[0]), error0, marker='o',)
 	plt.ylabel("q0 error in rads")
 	plt.subplot(3, 1, 2)
-	plt.plot(range(error1.shape[0]), error1)
+	plt.plot(range(error1.shape[0]), error1, marker='o',)
 	plt.ylabel("q1 error in rads")
 	plt.subplot(3, 1, 3)
-	plt.plot(range(average_error.shape[0]), average_error)
+	plt.plot(range(average_error.shape[0]), average_error, marker='o',)
 	plt.ylabel("average in rads")
 	plt.xlabel("Refinement #")
 	# plotting desired vs real joint positions after refinements
@@ -189,7 +189,7 @@ def babbling_fcn(simulation_minutes=5):
 	"""
 	np.random.seed(2) # to get consistent results for debugging purposes
 
-	model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/mujoco-py/xmls/nmi_leg_w_chassis_fixed.xml")
+	model = load_model_from_path("./models/nmi_leg_w_chassis_fixed.xml")
 	sim = MjSim(model)
 
 	# viewer = MjViewer(sim)
@@ -439,9 +439,9 @@ def run_activations_fcn(est_activations, chassis_fix=True, timestep=0.005, Mj_re
 	#est_task_activations=np.load("est_task_activations.npy")
 
 	if chassis_fix:
-		model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/G2P_mujoco-py/models/nmi_leg_w_chassis_fixed.xml")
+		model = load_model_from_path("./models/nmi_leg_w_chassis_fixed.xml")
 	else:
-		model = load_model_from_path("C:/Users/Ali/Google Drive/Current/USC/Github/G2P_mujoco-py/models/nmi_leg_w_chassis_walk.xml")
+		model = load_model_from_path("./models/nmi_leg_w_chassis_walk.xml")
 	sim = MjSim(model)
 	if Mj_render:
 		viewer = MjViewer(sim)
