@@ -7,19 +7,24 @@ from all_functions import *
 import pickle
 from warnings import simplefilter
 
+#np.random.seed(0)
 simplefilter(action='ignore', category=FutureWarning)
 
-[babbling_kinematics, babbling_activations] = babbling_fcn(simulation_minutes=5)
-model = inverse_mapping_fcn(kinematics=babbling_kinematics, activations=babbling_activations)
+run_mode=input("Please enter the run mode (1 for in air adaptation or 2 for learn to move): ")
+if run_mode=="1":
+	babbling_simulation_minutes = 1
+elif run_mode=="2":
+	babbling_simulation_minutes = 5
+else:
+	raise ValueError('Invalid run mode')
+
+[babbling_kinematics, babbling_activations] = babbling_fcn(simulation_minutes=babbling_simulation_minutes)
+model = inverse_mapping_fcn(kinematics=babbling_kinematics, activations=babbling_activations, early_stopping=False)
 cum_kinematics = babbling_kinematics
 cum_activations = babbling_activations
 
-# pickle.dump([model,cum_kinematics, cum_activations],open("results/mlp_model.sav", 'wb'))
-#[model,cum_kinematics, cum_activations] = pickle.load(open("results/mlp_model.sav", 'rb')) # loading the model
-#np.random.seed(0)
-
-
-run_mode=input("Please enter the run mode (1 for in air adaptation or 2 for learn to move): ")
+pickle.dump([model,cum_kinematics, cum_activations],open("results/mlp_model.sav", 'wb'))
+[model,cum_kinematics, cum_activations] = pickle.load(open("results/mlp_model.sav", 'rb')) # loading the model
 
 if run_mode=="1":
 	[model, errors, cum_kinematics, cum_activations] =\
