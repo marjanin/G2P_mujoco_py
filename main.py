@@ -24,7 +24,7 @@ cum_kinematics = babbling_kinematics
 cum_activations = babbling_activations
 
 pickle.dump([model,cum_kinematics, cum_activations],open("results/mlp_model.sav", 'wb'))
-[model,cum_kinematics, cum_activations] = pickle.load(open("results/mlp_model.sav", 'rb')) # loading the model
+#[model,cum_kinematics, cum_activations] = pickle.load(open("results/mlp_model.sav", 'rb')) # loading the model
 
 if run_mode=="1":
 	[model, errors, cum_kinematics, cum_activations] =\
