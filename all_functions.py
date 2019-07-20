@@ -15,7 +15,7 @@ from mujoco_py.generated import const
 #	v1: touching the floor and can move in x axis
 #	v2: touching the floor and can move in x and y axes (cannot rotate, however)
 
-def learn_to_move_fcn(model, cum_kinematics, cum_activations, reward_thresh=7, refinement = False, Mj_render = False):
+def learn_to_move_fcn(model, cum_kinematics, cum_activations, reward_thresh=6, refinement = False, Mj_render = False):
 	
 	prev_reward = np.array([0])
 	best_reward_so_far = prev_reward
@@ -91,13 +91,13 @@ def in_air_adaptation_fcn(model, babbling_kinematics, babbling_activations, numb
 	plt.figure()
 	plt.subplot(3, 1, 1)
 	plt.plot(range(error0.shape[0]), error0, marker='o',)
-	plt.ylabel("q0 error in rads")
+	plt.ylabel("q0 error (rads)")
 	plt.subplot(3, 1, 2)
 	plt.plot(range(error1.shape[0]), error1, marker='o',)
-	plt.ylabel("q1 error in rads")
+	plt.ylabel("q1 error (rads)")
 	plt.subplot(3, 1, 3)
 	plt.plot(range(average_error.shape[0]), average_error, marker='o',)
-	plt.ylabel("average in rads")
+	plt.ylabel("average error (rads)")
 	plt.xlabel("Refinement #")
 	# plotting desired vs real joint positions after refinements
 	plt.figure()
@@ -196,7 +196,7 @@ def babbling_fcn(simulation_minutes=5):
 	this function babbles in the mujoco environment and then
 	returns input outputs (actuation values and kinematics)
 	"""
-	np.random.seed(2) # to get consistent results for debugging purposes
+	np.random.seed(0) # to get consistent results for debugging purposes
 
 	model = load_model_from_path("./models/nmi_leg_w_chassis_v0.xml")
 	sim = MjSim(model)

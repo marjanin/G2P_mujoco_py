@@ -7,7 +7,6 @@ from all_functions import *
 import pickle
 from warnings import simplefilter
 
-#np.random.seed(0)
 simplefilter(action='ignore', category=FutureWarning)
 
 run_mode=input("Please enter the run mode (1 for in air adaptation or 2 for learn to move): ")
@@ -23,8 +22,10 @@ model = inverse_mapping_fcn(kinematics=babbling_kinematics, activations=babbling
 cum_kinematics = babbling_kinematics
 cum_activations = babbling_activations
 
-pickle.dump([model,cum_kinematics, cum_activations],open("results/mlp_model.sav", 'wb'))
+pickle.dump([model,cum_kinematics, cum_activations],open("results/mlp_model.sav", 'wb')) # saving the model
 #[model,cum_kinematics, cum_activations] = pickle.load(open("results/mlp_model.sav", 'rb')) # loading the model
+
+np.random.seed(2) # change the seed for different initial conditions
 
 if run_mode=="1":
 	[model, errors, cum_kinematics, cum_activations] =\
@@ -40,10 +41,9 @@ elif run_mode=="2":
 		model=model,
 		cum_kinematics=cum_kinematics,
 		cum_activations=cum_activations,
-		reward_thresh=7,
+		reward_thresh=6,
 		refinement=False,
 		Mj_render=True)
 else:
 	raise ValueError('Invalid run mode')
-input("End of the simulation; press anykey to exit")
 #import pdb; pdb.set_trace()
